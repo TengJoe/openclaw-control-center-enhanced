@@ -16,6 +16,29 @@ Fork 说明：这个 fork 额外收紧了 localhost 鉴权边界，并在只读 
   - 默认本地 token 鉴权
   - 默认关闭高风险写操作
 
+## 怎么用
+1. 打开 `http://127.0.0.1:4310/`
+2. 输入 `.env` 里的 `LOCAL_API_TOKEN`
+3. 先看 `总览`、`用量`、`员工`
+4. 需要查看源文件时，再进入 `文档` 或 `记忆`
+
+如果你看到登录页，说明服务已经正常启动，只是在等本地令牌。
+
+## 这台机器上的部署方式
+- 仓库目录：`~/.openclaw/workspace/agents/main/control-center`
+- 默认地址：`http://127.0.0.1:4310`
+- 当前模式：只读、需要本地 token 登录、关闭高风险写操作
+- 常驻方式：`launchd`
+
+常用检查命令：
+
+```bash
+launchctl print gui/$(id -u)/com.tengjoe.openclaw-control-center | sed -n '1,80p'
+tail -n 80 ~/.openclaw/workspace/agents/main/control-center/runtime/launchd-out.log
+tail -n 80 ~/.openclaw/workspace/agents/main/control-center/runtime/launchd-error.log
+curl http://127.0.0.1:4310/healthz
+```
+
 ## 你能得到什么
 - `总览`：系统状态、待处理事项、关键风险和运营摘要
 - `用量`：用量、花费、订阅窗口和连接状态
@@ -59,6 +82,14 @@ UI_MODE=true npm run dev
 然后打开：
 - `http://127.0.0.1:4310/?section=overview&lang=zh`
 - `http://127.0.0.1:4310/?section=overview&lang=en`
+
+如果本地 token 鉴权已开启，先访问：
+- `http://127.0.0.1:4310/login`
+
+登录后建议先看：
+- `http://127.0.0.1:4310/?section=overview&lang=zh`
+- `http://127.0.0.1:4310/?section=usage-cost&lang=zh`
+- `http://127.0.0.1:4310/?section=team&lang=zh`
 
 ## 分区功能说明
 
@@ -111,6 +142,19 @@ UI_MODE=true npm run dev
 - 不会改写 `~/.openclaw/openclaw.json`
 
 ## 安装与上手
+
+如果你只是想在本机用这个项目，最短路径是：
+
+1. 配好 `.env`
+2. 保持 `READONLY_MODE=true`
+3. 启动 UI
+4. 用 `LOCAL_API_TOKEN` 登录
+5. 先确认 `healthz`、`总览`、`用量` 三块都能打开
+
+日常使用建议：
+- 平时只看板：保持只读
+- 需要编辑文档/记忆：确认自己真的要写回源文件，再登录后操作
+- 看到 `monitor missing`：在这个 fork 的只读 UI 模式下通常是预期现象，不等于服务坏了
 
 ### 1. 开始前准备
 你最好已经有：

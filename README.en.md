@@ -16,6 +16,29 @@ Language: **English** | [中文](README.md)
   - local token auth by default
   - mutation routes disabled by default
 
+## How To Use It
+1. Open `http://127.0.0.1:4310/`
+2. Enter the `LOCAL_API_TOKEN` from your `.env`
+3. Start with `Overview`, `Usage`, and `Staff`
+4. Open `Documents` or `Memory` only when you actually need source-backed files
+
+If you see the login page, the service is up and waiting for your local token.
+
+## Deployment On This Machine
+- Repo path: `~/.openclaw/workspace/agents/main/control-center`
+- Default URL: `http://127.0.0.1:4310`
+- Mode: readonly, local-token login, high-risk writes disabled
+- Service manager: `launchd`
+
+Useful checks:
+
+```bash
+launchctl print gui/$(id -u)/com.tengjoe.openclaw-control-center | sed -n '1,80p'
+tail -n 80 ~/.openclaw/workspace/agents/main/control-center/runtime/launchd-out.log
+tail -n 80 ~/.openclaw/workspace/agents/main/control-center/runtime/launchd-error.log
+curl http://127.0.0.1:4310/healthz
+```
+
 ## What you get
 - `Overview`: health, current state, decisions waiting, and operator-facing summaries
 - `Usage`: usage, spend, subscription windows, and connector status
@@ -59,6 +82,14 @@ UI_MODE=true npm run dev
 Then open:
 - `http://127.0.0.1:4310/?section=overview&lang=en`
 - `http://127.0.0.1:4310/?section=overview&lang=zh`
+
+If local-token auth is enabled, visit first:
+- `http://127.0.0.1:4310/login`
+
+Recommended first pages after login:
+- `http://127.0.0.1:4310/?section=overview&lang=en`
+- `http://127.0.0.1:4310/?section=usage-cost&lang=en`
+- `http://127.0.0.1:4310/?section=team&lang=en`
 
 ## Section-by-section tour
 
@@ -125,6 +156,19 @@ For:
 7. `UI_MODE=true npm run dev`
 
 ## Installation and onboarding
+
+If you just want to use this locally, the shortest path is:
+
+1. configure `.env`
+2. keep `READONLY_MODE=true`
+3. start the UI
+4. sign in with `LOCAL_API_TOKEN`
+5. verify `healthz`, `Overview`, and `Usage`
+
+Day-to-day guidance:
+- Keep readonly mode on for dashboard-only use
+- Only edit Documents/Memory when you really want to write back to source files
+- In this hardened fork, `monitor missing` can be expected in readonly UI mode and does not automatically mean the service is broken
 
 ### 1. Before you start
 You should already have:

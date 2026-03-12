@@ -4,6 +4,12 @@ Language: [中文](INSTALL_PROMPT.md) | **English**
 
 Give the full prompt below to your own OpenClaw so it can install and connect `OpenClaw Control Center` to this machine's OpenClaw environment.
 
+The target end state after install should be:
+- the user opens the local URL and sees the login page first
+- the user signs in with the `LOCAL_API_TOKEN` from `.env`
+- readonly mode stays on by default
+- the user can immediately use `Overview`, `Usage`, and `Staff`
+
 ```text
 You are installing and connecting OpenClaw Control Center to this machine's OpenClaw environment.
 
@@ -93,6 +99,8 @@ Phase 5: hand off a ready-to-run result
    - which env values you changed
    - which env values stayed on the defaults
    - the exact command I should run next to launch the UI
+   - the login page URL
+   - which token I should use to sign in (state the source only; never print the raw token)
    - the first 3 dashboard pages I should open
    - which missing signals are normal for a partially connected environment
    - which capabilities are working now
@@ -105,6 +113,7 @@ Format your final answer as:
 - Differences and degradation assessment
 - Actual changes
 - Verification result
+- Login flow
 - Next command
 - First pages to open
 ```

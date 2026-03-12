@@ -13384,14 +13384,14 @@ function renderUiLoginPage(input: {
 </head>
 <body>
   <form class="card" method="POST" action="/login">
-    <h1>${escapeHtml(t("Local Access Required", "需要本地访问令牌"))}</h1>
-    <p>${escapeHtml(t("This fork protects the local dashboard behind your local token.", "这个 fork 会用本地令牌保护控制台页面。"))}</p>
+    <h1>${escapeHtml(t("Enter Local Token", "输入本地令牌"))}</h1>
+    <p>${escapeHtml(t("Use your local token to open the dashboard.", "使用本地令牌进入控制台。"))}</p>
     ${errorBlock}
     <input type="hidden" name="next" value="${escapeHtml(input.next)}" />
     <label for="localToken">${escapeHtml(t("Local token", "本地令牌"))}</label>
     <input id="localToken" name="localToken" type="password" autocomplete="current-password" required />
-    <button type="submit">${escapeHtml(t("Enter Dashboard", "进入控制台"))}</button>
-    <div class="meta">${escapeHtml(t("Writes still require explicit token submission on protected mutation routes.", "写操作仍然需要在受保护变更接口上显式提交 token。"))}</div>
+    <button type="submit">${escapeHtml(t("Open Dashboard", "进入控制台"))}</button>
+    <div class="meta">${escapeHtml(t("Protected write actions still require the token.", "受保护写操作仍然需要 token。"))}</div>
   </form>
 </body>
 </html>`;
