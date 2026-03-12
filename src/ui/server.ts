@@ -8050,6 +8050,33 @@ async function renderHtml(
       border-color: rgba(143, 224, 169, 0.22) !important;
       background: rgba(13, 39, 25, 0.96) !important;
     }
+    body[data-ui-theme-resolved="dark"] .global-visibility-card,
+    body[data-ui-theme-resolved="dark"] .global-visibility-strip-card,
+    body[data-ui-theme-resolved="dark"] .global-visibility-card .fold-body,
+    body[data-ui-theme-resolved="dark"] .dashboard-strip,
+    body[data-ui-theme-resolved="dark"] .signal-gauge-card,
+    body[data-ui-theme-resolved="dark"] .summary-gauge-card,
+    body[data-ui-theme-resolved="dark"] .overview-pulse-card .status-chip {
+      background: linear-gradient(180deg, rgba(13, 24, 36, 0.98), rgba(17, 31, 46, 0.96)) !important;
+      border-color: rgba(132, 164, 201, 0.18) !important;
+      box-shadow: 0 14px 30px rgba(2, 8, 14, 0.24) !important;
+    }
+    body[data-ui-theme-resolved="dark"] .signal-gauge,
+    body[data-ui-theme-resolved="dark"] .signal-gauge-core {
+      background: rgba(21, 32, 44, 0.96) !important;
+      border-color: rgba(132, 164, 201, 0.18) !important;
+      box-shadow: none !important;
+    }
+    body[data-ui-theme-resolved="dark"] .signal-gauge-head span,
+    body[data-ui-theme-resolved="dark"] .summary-gauge-card span,
+    body[data-ui-theme-resolved="dark"] .summary-gauge-card strong,
+    body[data-ui-theme-resolved="dark"] .signal-gauge-core strong,
+    body[data-ui-theme-resolved="dark"] .signal-gauge-meta small,
+    body[data-ui-theme-resolved="dark"] .signal-gauge-meta a,
+    body[data-ui-theme-resolved="dark"] .overview-pulse-card .status-chip span,
+    body[data-ui-theme-resolved="dark"] .overview-pulse-card .status-chip strong {
+      color: #eef5fb !important;
+    }
   </style>
 </head>
 <body class="ui-preload" data-ui-polish="apple-native-v3" data-apple-window-controls="true" data-ui-language="${escapeHtml(options.language)}" data-ui-theme="auto" data-ui-theme-resolved="light" style="--fold-open-label:${options.language === "en" ? "'Expand'" : "'展开'"}; --fold-close-label:${options.language === "en" ? "'Collapse'" : "'收起'"};">
