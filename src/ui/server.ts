@@ -7975,6 +7975,81 @@ async function renderHtml(
         transition-duration: 0.01ms !important;
       }
     }
+    /* Absolutely-last dark overrides so light utility panels cannot win later in the cascade. */
+    body[data-ui-theme-resolved="dark"] .exec-card,
+    body[data-ui-theme-resolved="dark"] .signal-gauge-card,
+    body[data-ui-theme-resolved="dark"] .summary-gauge-card,
+    body[data-ui-theme-resolved="dark"] .subscription-pill,
+    body[data-ui-theme-resolved="dark"] .quota-row,
+    body[data-ui-theme-resolved="dark"] .pie-hole,
+    body[data-ui-theme-resolved="dark"] .office-card,
+    body[data-ui-theme-resolved="dark"] .staff-brief-card,
+    body[data-ui-theme-resolved="dark"] .staff-avatar,
+    body[data-ui-theme-resolved="dark"] .agent-avatar,
+    body[data-ui-theme-resolved="dark"] .agent-stage,
+    body[data-ui-theme-resolved="dark"] .memory-row,
+    body[data-ui-theme-resolved="dark"] .file-sidebar,
+    body[data-ui-theme-resolved="dark"] .file-editor-panel,
+    body[data-ui-theme-resolved="dark"] .file-nav-item,
+    body[data-ui-theme-resolved="dark"] .file-facet-switch .segment-item,
+    body[data-ui-theme-resolved="dark"] .docs-search input,
+    body[data-ui-theme-resolved="dark"] .docs-source-filter-wrap select,
+    body[data-ui-theme-resolved="dark"] .file-filter-input,
+    body[data-ui-theme-resolved="dark"] .file-token-input,
+    body[data-ui-theme-resolved="dark"] .file-editor-textarea {
+      background: linear-gradient(180deg, rgba(13, 24, 36, 0.98), rgba(17, 31, 46, 0.96)) !important;
+      border-color: rgba(132, 164, 201, 0.18) !important;
+      box-shadow: 0 14px 30px rgba(2, 8, 14, 0.24) !important;
+    }
+    body[data-ui-theme-resolved="dark"] .quota-track,
+    body[data-ui-theme-resolved="dark"] .summary-track,
+    body[data-ui-theme-resolved="dark"] .bar-track {
+      background: rgba(42, 59, 78, 0.92) !important;
+      border-color: rgba(132, 164, 201, 0.18) !important;
+    }
+    body[data-ui-theme-resolved="dark"] .exec-title,
+    body[data-ui-theme-resolved="dark"] .exec-metric,
+    body[data-ui-theme-resolved="dark"] .signal-gauge-head span,
+    body[data-ui-theme-resolved="dark"] .signal-gauge-core strong,
+    body[data-ui-theme-resolved="dark"] .signal-gauge-meta a,
+    body[data-ui-theme-resolved="dark"] .summary-gauge-card strong,
+    body[data-ui-theme-resolved="dark"] .quota-label,
+    body[data-ui-theme-resolved="dark"] .quota-value,
+    body[data-ui-theme-resolved="dark"] .quota-foot,
+    body[data-ui-theme-resolved="dark"] .pie-hole strong,
+    body[data-ui-theme-resolved="dark"] .pie-hole span,
+    body[data-ui-theme-resolved="dark"] .pie-name,
+    body[data-ui-theme-resolved="dark"] .pie-val,
+    body[data-ui-theme-resolved="dark"] .office-info .topline strong,
+    body[data-ui-theme-resolved="dark"] .staff-brief-identity h3,
+    body[data-ui-theme-resolved="dark"] .staff-role,
+    body[data-ui-theme-resolved="dark"] .agent-animal-label,
+    body[data-ui-theme-resolved="dark"] .memory-day,
+    body[data-ui-theme-resolved="dark"] .memory-title,
+    body[data-ui-theme-resolved="dark"] .file-nav-title,
+    body[data-ui-theme-resolved="dark"] .file-nav-meta,
+    body[data-ui-theme-resolved="dark"] .file-editor-title,
+    body[data-ui-theme-resolved="dark"] .file-facet-switch .segment-item,
+    body[data-ui-theme-resolved="dark"] .file-facet-switch .segment-item.active {
+      color: #eef5fb !important;
+    }
+    body[data-ui-theme-resolved="dark"] .file-editor-textarea,
+    body[data-ui-theme-resolved="dark"] .file-filter-input,
+    body[data-ui-theme-resolved="dark"] .file-token-input,
+    body[data-ui-theme-resolved="dark"] .docs-search input,
+    body[data-ui-theme-resolved="dark"] .docs-source-filter-wrap select {
+      color: #eef5fb !important;
+    }
+    body[data-ui-theme-resolved="dark"] .badge.not_done {
+      color: #c9d5e3 !important;
+      border-color: rgba(201, 213, 227, 0.18) !important;
+      background: rgba(21, 32, 44, 0.96) !important;
+    }
+    body[data-ui-theme-resolved="dark"] .badge.done {
+      color: #8fe0a9 !important;
+      border-color: rgba(143, 224, 169, 0.22) !important;
+      background: rgba(13, 39, 25, 0.96) !important;
+    }
   </style>
 </head>
 <body class="ui-preload" data-ui-polish="apple-native-v3" data-apple-window-controls="true" data-ui-language="${escapeHtml(options.language)}" data-ui-theme="auto" data-ui-theme-resolved="light" style="--fold-open-label:${options.language === "en" ? "'Expand'" : "'展开'"}; --fold-close-label:${options.language === "en" ? "'Collapse'" : "'收起'"};">
