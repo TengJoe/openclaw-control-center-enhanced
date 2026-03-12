@@ -8387,7 +8387,7 @@ async function listEditableMemoryFiles(): Promise<EditableFileEntry[]> {
 
   const append = async (entry: EditableFileEntry | undefined): Promise<void> => {
     if (!entry) return;
-    const key = resolve(entry.sourcePath);
+    const key = buildEditableEntryDedupKey(entry.sourcePath, entry.facetKey);
     if (seen.has(key)) return;
     seen.add(key);
     output.push(entry);
@@ -8484,7 +8484,7 @@ async function listEditableWorkspaceFiles(): Promise<EditableFileEntry[]> {
 
   const append = async (entry: EditableFileEntry | undefined): Promise<void> => {
     if (!entry) return;
-    const key = resolve(entry.sourcePath);
+    const key = buildEditableEntryDedupKey(entry.sourcePath, entry.facetKey);
     if (seen.has(key)) return;
     seen.add(key);
     output.push(entry);
@@ -8556,6 +8556,19 @@ function documentFilePriority(relativePath: string): number {
 async function listEditableFiles(scope: EditableFileScope): Promise<EditableFileEntry[]> {
   if (scope === "memory") return listEditableMemoryFiles();
   return listEditableWorkspaceFiles();
+}
+
+function buildEditableEntryDedupKey(sourcePath: string, facetKey: string | undefined): string {
+  return `${resolve(sourcePath)}::${normalizeEditableFacetKey(facetKey)}`;
+}
+
+export function buildEditableEntryDedupKeyForSmoke(sourcePath: string, facetKey?: string): string {
+  return buildEditableEntryDedupKey(sourcePath, facetKey);
+}
+
+function normalizeEditableFacetKey(value: string | undefined): string {
+  const normalized = (value ?? "main").trim().toLowerCase();
+  return normalized === "" ? "main" : normalized;
 }
 
 async function loadEditableAgentScopes(): Promise<EditableAgentScope[]> {

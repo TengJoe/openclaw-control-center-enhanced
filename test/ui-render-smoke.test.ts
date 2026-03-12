@@ -513,6 +513,18 @@ test("editable agent scopes follow configured agents before workspace folders", 
   );
 });
 
+test("shared workspace files keep separate visibility per facet", async () => {
+  const { buildEditableEntryDedupKeyForSmoke } = await import("../src/ui/server");
+
+  const sharedPath = path.resolve(process.cwd(), "..", "..", "..", "memory", "MEMORY.md");
+  const mainKey = buildEditableEntryDedupKeyForSmoke(sharedPath, "main");
+  const personalKey = buildEditableEntryDedupKeyForSmoke(sharedPath, "personal");
+
+  assert.notEqual(mainKey, personalKey);
+  assert.equal(mainKey.endsWith("::main"), true);
+  assert.equal(personalKey.endsWith("::personal"), true);
+});
+
 test("search helpers keep total matches separate from returned rows", async () => {
   const { buildDashboardSearchResultForSmoke } = await import("../src/ui/server");
 
