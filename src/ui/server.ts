@@ -7175,6 +7175,60 @@ async function renderHtml(
       padding-top: 8px;
       border-top: 1px solid rgba(17, 24, 39, 0.06);
     }
+    /* Targeted dark-mode pass for remaining light utility frames. */
+    body[data-ui-theme-resolved="dark"] .subscription-pill,
+    body[data-ui-theme-resolved="dark"] .quota-row,
+    body[data-ui-theme-resolved="dark"] .pie-hole,
+    body[data-ui-theme-resolved="dark"] .office-card,
+    body[data-ui-theme-resolved="dark"] .staff-brief-card,
+    body[data-ui-theme-resolved="dark"] .staff-avatar,
+    body[data-ui-theme-resolved="dark"] .agent-stage,
+    body[data-ui-theme-resolved="dark"] .memory-row,
+    body[data-ui-theme-resolved="dark"] .file-sidebar,
+    body[data-ui-theme-resolved="dark"] .file-editor-panel,
+    body[data-ui-theme-resolved="dark"] .file-facet-switch .segment-item {
+      background: linear-gradient(180deg, rgba(13, 24, 36, 0.98), rgba(17, 31, 46, 0.96)) !important;
+      border-color: rgba(132, 164, 201, 0.18) !important;
+      box-shadow: 0 14px 30px rgba(2, 8, 14, 0.24) !important;
+    }
+    body[data-ui-theme-resolved="dark"] .agent-stage {
+      background:
+        linear-gradient(180deg, rgba(12, 22, 34, 0.92), rgba(16, 30, 46, 0.88)),
+        repeating-linear-gradient(
+          0deg,
+          rgba(186, 204, 224, 0.06) 0px,
+          rgba(186, 204, 224, 0.06) 1px,
+          transparent 1px,
+          transparent 8px
+        ),
+        repeating-linear-gradient(
+          90deg,
+          rgba(186, 204, 224, 0.06) 0px,
+          rgba(186, 204, 224, 0.06) 1px,
+          transparent 1px,
+          transparent 8px
+        ) !important;
+    }
+    body[data-ui-theme-resolved="dark"] .subscription-pill,
+    body[data-ui-theme-resolved="dark"] .quota-label,
+    body[data-ui-theme-resolved="dark"] .quota-value,
+    body[data-ui-theme-resolved="dark"] .quota-foot,
+    body[data-ui-theme-resolved="dark"] .pie-hole strong,
+    body[data-ui-theme-resolved="dark"] .pie-hole span,
+    body[data-ui-theme-resolved="dark"] .office-info .topline strong,
+    body[data-ui-theme-resolved="dark"] .staff-brief-identity h3,
+    body[data-ui-theme-resolved="dark"] .staff-role,
+    body[data-ui-theme-resolved="dark"] .agent-animal-label,
+    body[data-ui-theme-resolved="dark"] .memory-day,
+    body[data-ui-theme-resolved="dark"] .memory-title,
+    body[data-ui-theme-resolved="dark"] .file-facet-switch .segment-item,
+    body[data-ui-theme-resolved="dark"] .file-facet-switch .segment-item.active {
+      color: #eef5fb !important;
+    }
+    body[data-ui-theme-resolved="dark"] .quota-track {
+      background: rgba(42, 59, 78, 0.92) !important;
+      border-color: rgba(132, 164, 201, 0.18) !important;
+    }
     .staff-brief-row:first-child {
       border-top: none;
       padding-top: 0;
