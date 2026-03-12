@@ -661,6 +661,16 @@ test("session links stay on the session detail UI and docs index accepts languag
   assert(source.includes('function joinDisplayList(items: string[], language: UiLanguage): string {'));
 });
 
+test("dashboard includes theme toggle and persistent browser theme state", async () => {
+  const source = await readFile("src/ui/server.ts", "utf8");
+
+  assert(source.includes("function renderThemeToggle(language: UiLanguage): string {"));
+  assert(source.includes("openclaw:theme-mode:v1"));
+  assert(source.includes('data-ui-theme="auto"'));
+  assert(source.includes('data-ui-theme-resolved="light"'));
+  assert(source.includes("matchMedia('(prefers-color-scheme: dark)')"));
+});
+
 test("navigation script does not add artificial leave delay", async () => {
   const source = await readFile("src/ui/server.ts", "utf8");
   assert(source.includes("window.location.href = href;"));

@@ -4254,6 +4254,7 @@ async function renderHtml(
     return `<a class="nav-link${activeClass}" href="${escapeHtml(href)}"${current}><span>${escapeHtml(item.label)}</span><small>${escapeHtml(item.blurb)}</small></a>`;
   }).join("");
   const languageToggle = renderLanguageToggle(filters, options);
+  const themeToggle = renderThemeToggle(options.language);
   const replayMomentsRows =
     replayMoments.length === 0
       ? `<li>${escapeHtml(t("No timeline events yet.", "暂无时间线事件。"))}</li>`
@@ -5406,6 +5407,7 @@ async function renderHtml(
       ? globalVisibilityQuickRows
       : `<div class="meta"><a href="${escapeHtml(buildHomeHref({ quick: "all" }, true, "overview", options.language, options.usageView))}">${escapeHtml(t("See four signals in overview", "在总览查看四项信号"))}</a></div>`;
   const fileWorkbenchScript = renderFileWorkbenchScript();
+  const themePreferenceScript = renderThemePreferenceScript(options.language);
   const agentVisualEnhancerScript = renderAgentVisualEnhancerScript();
   const nativeMotionScript = renderNativeMotionScript(options.language);
   const quotaResetScript = renderQuotaResetScript();
@@ -5650,6 +5652,41 @@ async function renderHtml(
       color: #005bb8;
       background: linear-gradient(180deg, rgba(241, 248, 255, 0.98), rgba(250, 253, 255, 0.96));
       box-shadow: 0 10px 24px rgba(0, 113, 227, 0.08);
+    }
+    .theme-toggle {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+    .theme-toggle-label {
+      min-width: 100%;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .theme-toggle .segment-item {
+      border: 1px solid rgba(17, 24, 39, 0.09);
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: rgba(255, 255, 255, 0.72);
+      color: #435364;
+      cursor: pointer;
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 620;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, color 160ms ease;
+    }
+    .theme-toggle .segment-item:hover {
+      transform: translateY(-1px);
+      border-color: rgba(0, 113, 227, 0.24);
+      color: #005bb8;
+    }
+    .theme-toggle .segment-item.active {
+      border-color: rgba(0, 113, 227, 0.32);
+      background: rgba(235, 245, 255, 0.96);
+      color: #005bb8;
     }
     .content-stack { margin-top: var(--space-2); display: grid; gap: var(--space-2); }
     .content-stack > #overview-decision-home { order: 1; }
@@ -6701,6 +6738,106 @@ async function renderHtml(
         inset 0 1px 0 rgba(255, 255, 255, 0.88),
         0 8px 18px rgba(17, 24, 39, 0.05);
     }
+    body[data-ui-theme-resolved="dark"] {
+      color: #e8eef6;
+      background:
+        radial-gradient(circle at 8% -10%, rgba(41, 88, 143, 0.28), transparent 34%),
+        radial-gradient(circle at 96% 0%, rgba(62, 93, 134, 0.22), transparent 32%),
+        linear-gradient(180deg, #07111a 0%, #0b1622 46%, #0d1a27 100%);
+    }
+    body[data-ui-theme-resolved="dark"]::before {
+      background:
+        linear-gradient(180deg, rgba(12, 24, 38, 0.62), rgba(12, 24, 38, 0.16) 42%, transparent 60%),
+        radial-gradient(circle at 50% -18%, rgba(66, 104, 145, 0.22), transparent 46%);
+    }
+    body[data-ui-theme-resolved="dark"] .sidebar,
+    body[data-ui-theme-resolved="dark"] .panel,
+    body[data-ui-theme-resolved="dark"] .card,
+    body[data-ui-theme-resolved="dark"] .overview-kpi-card,
+    body[data-ui-theme-resolved="dark"] .overview-primary-card,
+    body[data-ui-theme-resolved="dark"] .overview-busy-card,
+    body[data-ui-theme-resolved="dark"] .decision-row,
+    body[data-ui-theme-resolved="dark"] .status-chip,
+    body[data-ui-theme-resolved="dark"] .usage-chip,
+    body[data-ui-theme-resolved="dark"] .cron-owner-card,
+    body[data-ui-theme-resolved="dark"] .task-hub-stat,
+    body[data-ui-theme-resolved="dark"] .calendar-day,
+    body[data-ui-theme-resolved="dark"] .lane,
+    body[data-ui-theme-resolved="dark"] .project-chip,
+    body[data-ui-theme-resolved="dark"] .file-nav-item,
+    body[data-ui-theme-resolved="dark"] .file-editor-panel,
+    body[data-ui-theme-resolved="dark"] .brand,
+    body[data-ui-theme-resolved="dark"] .nav-link,
+    body[data-ui-theme-resolved="dark"] .quick-chip,
+    body[data-ui-theme-resolved="dark"] .segment-item,
+    body[data-ui-theme-resolved="dark"] .panel-toggle {
+      background: linear-gradient(180deg, rgba(14, 24, 36, 0.96), rgba(18, 31, 45, 0.94));
+      border-color: rgba(132, 164, 201, 0.16);
+      box-shadow: 0 18px 38px rgba(2, 8, 14, 0.34);
+    }
+    body[data-ui-theme-resolved="dark"] .overview-focus-stage,
+    body[data-ui-theme-resolved="dark"] .overview-focus-core,
+    body[data-ui-theme-resolved="dark"] .brand-kicker {
+      background: rgba(9, 18, 28, 0.82);
+      border-color: rgba(132, 164, 201, 0.16);
+      box-shadow: none;
+    }
+    body[data-ui-theme-resolved="dark"] h1,
+    body[data-ui-theme-resolved="dark"] h2,
+    body[data-ui-theme-resolved="dark"] h3,
+    body[data-ui-theme-resolved="dark"] .section-title,
+    body[data-ui-theme-resolved="dark"] .nav-link span,
+    body[data-ui-theme-resolved="dark"] .overview-primary-value,
+    body[data-ui-theme-resolved="dark"] .overview-focus-headline,
+    body[data-ui-theme-resolved="dark"] .overview-focus-score,
+    body[data-ui-theme-resolved="dark"] .overview-busy-head strong,
+    body[data-ui-theme-resolved="dark"] .overview-kpi-value,
+    body[data-ui-theme-resolved="dark"] .task-hub-stat strong,
+    body[data-ui-theme-resolved="dark"] .usage-chip strong,
+    body[data-ui-theme-resolved="dark"] .card h2,
+    body[data-ui-theme-resolved="dark"] strong {
+      color: #eef5fb;
+    }
+    body[data-ui-theme-resolved="dark"] .meta,
+    body[data-ui-theme-resolved="dark"] .section-blurb,
+    body[data-ui-theme-resolved="dark"] .overview-kpi-label,
+    body[data-ui-theme-resolved="dark"] .overview-kpi-detail,
+    body[data-ui-theme-resolved="dark"] .overview-focus-sub,
+    body[data-ui-theme-resolved="dark"] .overview-focus-meta,
+    body[data-ui-theme-resolved="dark"] .overview-primary-label,
+    body[data-ui-theme-resolved="dark"] .meta-inline,
+    body[data-ui-theme-resolved="dark"] small,
+    body[data-ui-theme-resolved="dark"] label {
+      color: #9fb3c8;
+    }
+    body[data-ui-theme-resolved="dark"] a {
+      color: #8bc4ff;
+    }
+    body[data-ui-theme-resolved="dark"] table th,
+    body[data-ui-theme-resolved="dark"] table td {
+      border-color: rgba(132, 164, 201, 0.12);
+      color: #d8e5f2;
+    }
+    body[data-ui-theme-resolved="dark"] input,
+    body[data-ui-theme-resolved="dark"] textarea,
+    body[data-ui-theme-resolved="dark"] select {
+      background: rgba(7, 16, 25, 0.92);
+      color: #edf4fb;
+      border-color: rgba(132, 164, 201, 0.16);
+    }
+    body[data-ui-theme-resolved="dark"] code {
+      background: rgba(8, 17, 27, 0.82);
+      color: #d8e7f8;
+      border-radius: 8px;
+      padding: 1px 6px;
+    }
+    body[data-ui-theme-resolved="dark"] .theme-toggle .segment-item.active,
+    body[data-ui-theme-resolved="dark"] .quick-chip.active,
+    body[data-ui-theme-resolved="dark"] .nav-link.active {
+      background: linear-gradient(180deg, rgba(22, 42, 64, 0.98), rgba(17, 33, 49, 0.95));
+      border-color: rgba(139, 196, 255, 0.3);
+      color: #8bc4ff;
+    }
     .segment-item {
       -webkit-appearance: none;
       appearance: none;
@@ -7425,7 +7562,7 @@ async function renderHtml(
     }
   </style>
 </head>
-<body class="ui-preload" data-ui-polish="apple-native-v3" data-apple-window-controls="true" data-ui-language="${escapeHtml(options.language)}" style="--fold-open-label:${options.language === "en" ? "'Expand'" : "'展开'"}; --fold-close-label:${options.language === "en" ? "'Collapse'" : "'收起'"};">
+<body class="ui-preload" data-ui-polish="apple-native-v3" data-apple-window-controls="true" data-ui-language="${escapeHtml(options.language)}" data-ui-theme="auto" data-ui-theme-resolved="light" style="--fold-open-label:${options.language === "en" ? "'Expand'" : "'展开'"}; --fold-close-label:${options.language === "en" ? "'Collapse'" : "'收起'"};">
   <div class="app-shell">
     <aside class="sidebar">
       <div class="brand">
@@ -7433,6 +7570,7 @@ async function renderHtml(
         <h1>OpenClaw Control Center</h1>
         <div class="meta">${escapeHtml(t("Updated", "更新时间"))}${escapeHtml(options.language === "en" ? ": " : "：")}${escapeHtml(snapshot.generatedAt ?? t("Not available", "暂无"))}</div>
         ${languageToggle}
+        ${themeToggle}
       </div>
       <nav class="nav-links">${sectionNav}</nav>
     </aside>
@@ -7488,6 +7626,7 @@ async function renderHtml(
       </section>
     </aside>
   </div>
+  ${themePreferenceScript}
   ${agentVisualEnhancerScript}
   ${fileWorkbenchScript}
   ${nativeMotionScript}
@@ -9145,6 +9284,85 @@ function renderLanguageToggle(filters: TaskQueryFilters, options: DashboardOptio
   const label = pickUiText(options.language, "Language:", "语言：");
   const zhLabel = pickUiText(options.language, "中文", "中文");
   return `<div class="meta lang-toggle">${label} <a${enClass} href="${escapeHtml(enHref)}">EN</a> / <a${zhClass} href="${escapeHtml(zhHref)}">${zhLabel}</a></div>`;
+}
+
+function renderThemeToggle(language: UiLanguage): string {
+  const t = (en: string, zh: string): string => pickUiText(language, en, zh);
+  return `<div class="theme-toggle" data-theme-toggle>
+    <div class="theme-toggle-label">${escapeHtml(t("Theme", "主题"))}</div>
+    <button class="segment-item" type="button" data-theme-value="auto">${escapeHtml(t("Auto", "跟随系统"))}</button>
+    <button class="segment-item" type="button" data-theme-value="light">${escapeHtml(t("Light", "明亮"))}</button>
+    <button class="segment-item" type="button" data-theme-value="dark">${escapeHtml(t("Dark", "黑暗"))}</button>
+  </div>`;
+}
+
+function renderThemePreferenceScript(language: UiLanguage): string {
+  const autoLabel = pickUiText(language, "Auto", "跟随系统");
+  const lightLabel = pickUiText(language, "Light", "明亮");
+  const darkLabel = pickUiText(language, "Dark", "黑暗");
+  return `<script>
+(() => {
+  const storageKey = 'openclaw:theme-mode:v1';
+  const body = document.body;
+  if (!body) return;
+  const toggles = Array.from(document.querySelectorAll('[data-theme-toggle]'));
+  if (toggles.length === 0) return;
+
+  const media = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+  const labels = { auto: '${escapeHtml(autoLabel)}', light: '${escapeHtml(lightLabel)}', dark: '${escapeHtml(darkLabel)}' };
+
+  const normalizeMode = (value) => {
+    const normalized = String(value || '').trim().toLowerCase();
+    return normalized === 'light' || normalized === 'dark' ? normalized : 'auto';
+  };
+
+  const applyTheme = (mode) => {
+    const nextMode = normalizeMode(mode);
+    const resolved = nextMode === 'auto' ? (media && media.matches ? 'dark' : 'light') : nextMode;
+    body.dataset.uiTheme = nextMode;
+    body.dataset.uiThemeResolved = resolved;
+    document.documentElement.dataset.uiTheme = nextMode;
+    document.documentElement.dataset.uiThemeResolved = resolved;
+    toggles.forEach((root) => {
+      root.querySelectorAll('[data-theme-value]').forEach((button) => {
+        const active = normalizeMode(button.getAttribute('data-theme-value')) === nextMode;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', active ? 'true' : 'false');
+        button.setAttribute('title', labels[nextMode]);
+      });
+    });
+    try {
+      window.localStorage.setItem(storageKey, nextMode);
+    } catch {}
+  };
+
+  const initialMode = (() => {
+    try {
+      return window.localStorage.getItem(storageKey) || body.dataset.uiTheme || 'auto';
+    } catch {
+      return body.dataset.uiTheme || 'auto';
+    }
+  })();
+
+  applyTheme(initialMode);
+
+  toggles.forEach((root) => {
+    root.querySelectorAll('[data-theme-value]').forEach((button) => {
+      button.addEventListener('click', () => {
+        applyTheme(button.getAttribute('data-theme-value') || 'auto');
+      });
+    });
+  });
+
+  if (media && typeof media.addEventListener === 'function') {
+    media.addEventListener('change', () => {
+      if (normalizeMode(body.dataset.uiTheme || 'auto') === 'auto') {
+        applyTheme('auto');
+      }
+    });
+  }
+})();
+</script>`;
 }
 
 function buildHomeHref(
