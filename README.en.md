@@ -6,6 +6,18 @@ Safety-first local control center for OpenClaw.
 
 Fork note: this fork adds stricter localhost auth boundaries and avoids startup monitor artifact writes when running the UI in readonly mode.
 
+Project origin: this repository is derived from the original project [TianyiDataScience/openclaw-control-center](https://github.com/TianyiDataScience/openclaw-control-center). The original product direction, base control-center concept, and core runtime model belong to the original author.
+
+Main work in this edition:
+- tightened local-token auth boundaries and added a full UI login wall for protected local access
+- fixed readonly-mode boundaries so default-safe behavior matches what the UI and docs promise
+- improved UX with light/dark themes, dark-mode contrast fixes, and rewritten login/setup docs
+- improved performance with Gzip, session-history short-circuiting, local session-store reads, slow-metadata caching, and stale-while-revalidate snapshots
+- cleaned up engineering workflows with a cross-platform `smoke:ui`, project-structure docs, and the first read-model cache extraction out of `server.ts`
+
+For detailed attribution and change scope:
+- [docs/SOURCE_ATTRIBUTION.md](docs/SOURCE_ATTRIBUTION.md)
+
 Language: **English** | [中文](README.md)
 
 ## Why this exists

@@ -6,6 +6,18 @@ OpenClaw 的安全优先、本地优先控制中心。
 
 Fork 说明：这个 fork 额外收紧了 localhost 鉴权边界，并在只读 UI 模式下避免启动时生成监控落盘产物。
 
+项目来源：本项目基于原作者 [TianyiDataScience/openclaw-control-center](https://github.com/TianyiDataScience/openclaw-control-center) 演进而来，原始产品思路、基础控制台结构与核心运行模型归原作者所有。
+
+这一版主要增强：
+- 本地 token 鉴权边界收紧，敏感只读接口和整站 UI 登录墙补齐
+- 只读模式边界修复，避免默认状态下出现不符合预期的本地写入
+- UI 体验优化：明暗主题、深色对比修正、登录页与安装文档重写
+- 性能优化：Gzip、会话历史短路、local session store 优先、慢元数据缓存、快照 stale-while-revalidate
+- 工程整理：跨平台 `smoke:ui`、项目结构文档、读模型缓存开始从 `server.ts` 下沉
+
+详细来源与改动说明见：
+- [docs/SOURCE_ATTRIBUTION.md](docs/SOURCE_ATTRIBUTION.md)
+
 语言： [English](README.en.md) | **中文**
 
 ## 这个项目是做什么的
