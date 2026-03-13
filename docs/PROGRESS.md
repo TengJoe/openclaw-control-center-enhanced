@@ -1,5 +1,22 @@
 # Progress
 
+## Phase 152 (Fast local cron/approvals reads for readonly snapshots) — Completed
+- Scope:
+  - Reduce background cold-snapshot cost further after the UI already switched to stale-while-revalidate.
+- Changed files:
+  - `src/clients/openclaw-live-client.ts`
+  - `test/openclaw-live-client.test.ts`
+  - `docs/PROGRESS.md`
+- Implementation:
+  - `cronList()` now prefers the local `~/.openclaw/cron/jobs.json` file before falling back to the OpenClaw CLI.
+  - `approvalsGet()` now prefers the local `~/.openclaw/exec-approvals.json` file before falling back to the OpenClaw CLI.
+  - Kept the CLI as a fallback path so behavior still degrades safely if local files are unavailable.
+  - Added direct tests to prove the local-file fast path is used for both cron and approvals reads.
+- Verification:
+  - `npm run build`
+  - `npm test`
+  - `npm run smoke:ui`
+
 ## Phase 151 (Route-latency optimization without UI changes) — Completed
 - Scope:
   - Reduce slow first-navigation and post-cache-expiry stalls without changing page structure, copy, or data surfaces.

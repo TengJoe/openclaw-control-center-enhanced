@@ -69,6 +69,47 @@ test("sessionsList falls back to CLI listing when local stores are empty", async
   assert.equal(result.sessions?.[0]?.sessionId, "cli-1");
 });
 
+test("cronList prefers local cron file over the slower CLI path", async () => {
+  const client = new OpenClawLiveClient({
+    loadCronListFromFile: async () => ({
+      jobs: [
+        {
+          jobId: "cron-local",
+          name: "Local cron",
+          enabled: true,
+        },
+      ],
+    }),
+  });
+
+  const result = await client.cronList();
+
+  assert.equal(result.jobs?.length, 1);
+  assert.equal(result.jobs?.[0]?.jobId, "cron-local");
+});
+
+test("approvalsGet prefers local approvals file over the slower CLI path", async () => {
+  const client = new OpenClawLiveClient({
+    loadApprovalsFromFile: async () => ({
+      json: {
+        path: "/tmp/exec-approvals.json",
+        exists: true,
+        file: {
+          defaults: {},
+          agents: {},
+        },
+      },
+      rawText: '{"path":"/tmp/exec-approvals.json","exists":true}',
+    }),
+  });
+
+  const result = await client.approvalsGet();
+
+  assert.equal(typeof result.json, "object");
+  assert.equal((result.json as { path?: string }).path, "/tmp/exec-approvals.json");
+  assert.equal(result.rawText.includes("exec-approvals.json"), true);
+});
+
 test("sessionsHistory returns file-backed history without probing CLI support", async () => {
   let fileReadCount = 0;
   let probeCount = 0;

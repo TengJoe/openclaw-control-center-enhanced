@@ -30,6 +30,8 @@ interface SessionCacheItem {
 interface OpenClawLiveClientDeps {
   loadSessionsFromStores?: () => Promise<SessionsListResponse>;
   runSessionsListJson?: () => Promise<{ sessions?: Array<Record<string, unknown>> }>;
+  loadCronListFromFile?: () => Promise<CronListResponse | undefined>;
+  loadApprovalsFromFile?: () => Promise<ApprovalsGetResponse | undefined>;
   readSessionHistoryFile?: (
     sessionFile: string,
     limit: number,
@@ -215,6 +217,13 @@ export class OpenClawLiveClient implements ToolClient {
     }
 
     const nextValue = (async () => {
+      const loadCronListFromFileFn = this.deps.loadCronListFromFile ?? loadCronListFromFile;
+      const fromFile = await loadCronListFromFileFn();
+      if (fromFile) {
+        this.cronListCache = { value: fromFile, expiresAt: Date.now() + SLOW_METADATA_CACHE_TTL_MS };
+        return fromFile;
+      }
+
       let data: { jobs?: Array<Record<string, unknown>> };
       try {
         data = await runJson<{ jobs?: Array<Record<string, unknown>> }>(
@@ -261,6 +270,13 @@ export class OpenClawLiveClient implements ToolClient {
     }
 
     const nextValue = (async () => {
+      const loadApprovalsFromFileFn = this.deps.loadApprovalsFromFile ?? loadApprovalsFromFile;
+      const fromFile = await loadApprovalsFromFileFn();
+      if (fromFile) {
+        this.approvalsCache = { value: fromFile, expiresAt: Date.now() + SLOW_METADATA_CACHE_TTL_MS };
+        return fromFile;
+      }
+
       try {
         const json = await runJson<Record<string, unknown>>(
           ["approvals", "get", "--json"],
@@ -490,6 +506,42 @@ async function runHistoryText(sessionKey: string, limit: number): Promise<string
   if (trimmed === "") return rawText;
   const lines = trimmed.split(/\r?\n/);
   return lines.slice(-limit).join("\n");
+}
+
+async function loadCronListFromFile(): Promise<CronListResponse | undefined> {
+  try {
+    const raw = JSON.parse(await readFile(join(resolveOpenClawHomePath(), "cron", "jobs.json"), "utf8")) as unknown;
+    const root = asObject(raw);
+    const jobs = Array.isArray(root?.jobs)
+      ? root.jobs.flatMap((item) => {
+          const job = asObject(item);
+          return job ? [job as Record<string, unknown>] : [];
+        })
+      : [];
+    return { jobs };
+  } catch {
+    return undefined;
+  }
+}
+
+async function loadApprovalsFromFile(): Promise<ApprovalsGetResponse | undefined> {
+  const path = join(resolveOpenClawHomePath(), "exec-approvals.json");
+  try {
+    const raw = JSON.parse(await readFile(path, "utf8")) as unknown;
+    const file = asObject(raw);
+    if (!file) return undefined;
+    const json = {
+      path,
+      exists: true,
+      file,
+    };
+    return {
+      json,
+      rawText: JSON.stringify(json),
+    };
+  } catch {
+    return undefined;
+  }
 }
 
 async function probeSessionHistoryCliSupport(): Promise<boolean> {
