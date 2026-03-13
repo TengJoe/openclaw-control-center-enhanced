@@ -11120,6 +11120,14 @@ function renderNativeMotionScript(language: UiLanguage = "zh"): string {
   const warmHref = (href) => {
     if (!href || prefetchedHrefs.has(href)) return;
     if (href.startsWith('http') || href.startsWith('mailto:') || href.startsWith('#') || href.startsWith('/api/')) return;
+    const safePrefetchable =
+      href === '/' ||
+      href.startsWith('/?') ||
+      href.startsWith('/docs') ||
+      href.startsWith('/audit') ||
+      href.startsWith('/digest/latest') ||
+      href.startsWith('/details/');
+    if (!safePrefetchable) return;
     prefetchedHrefs.add(href);
     fetch(href, {
       credentials: 'same-origin',

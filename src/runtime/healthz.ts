@@ -53,7 +53,11 @@ export async function buildHealthzPayload(
     computeSnapshotFreshness(snapshot, POLLING_INTERVALS_MS.sessionsList, now),
   ]);
 
-  const status = resolveOverallStatus(snapshotFreshness.status, monitor.status);
+  const effectiveMonitorStatus =
+    shouldTreatMissingMonitorAsExpected() && monitor.status === "missing"
+      ? "ok"
+      : monitor.status;
+  const status = resolveOverallStatus(snapshotFreshness.status, effectiveMonitorStatus);
 
   return {
     generatedAt: now.toISOString(),
@@ -126,7 +130,7 @@ function computeSnapshotFreshness(
   };
 }
 
-function resolveOverallStatus(
+export function resolveOverallStatus(
   snapshotStatus: HealthStatus,
   monitorStatus: MonitorLagSummary["status"],
 ): HealthStatus {
@@ -139,4 +143,8 @@ function resolveOverallStatus(
   }
 
   return "ok";
+}
+
+export function shouldTreatMissingMonitorAsExpected(): boolean {
+  return READONLY_MODE && process.env.UI_MODE === "true";
 }
