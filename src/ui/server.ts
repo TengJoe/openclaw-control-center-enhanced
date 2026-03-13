@@ -5259,38 +5259,89 @@ async function renderHtml(
     }
     .theme-toggle {
       margin-top: 10px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      align-items: center;
+      display: grid;
+      gap: 8px;
+      align-items: start;
     }
     .theme-toggle-label {
-      min-width: 100%;
       font-size: 12px;
       color: var(--muted);
     }
-    .theme-toggle .segment-item {
-      border: 1px solid rgba(17, 24, 39, 0.09);
+    .theme-toggle-track {
+      display: inline-grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 6px;
+      padding: 6px;
+      width: min(100%, 186px);
       border-radius: 999px;
-      padding: 6px 10px;
-      background: rgba(255, 255, 255, 0.72);
-      color: #435364;
+      background:
+        linear-gradient(180deg, rgba(13, 18, 28, 0.94), rgba(17, 23, 34, 0.92)),
+        radial-gradient(circle at 20% 12%, rgba(255, 110, 110, 0.12), transparent 42%);
+      border: 1px solid rgba(126, 147, 177, 0.16);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        0 12px 28px rgba(9, 14, 24, 0.22);
+    }
+    .theme-toggle .segment-item.theme-toggle-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 54px;
+      height: 54px;
+      padding: 0;
+      border: 1px solid rgba(110, 126, 151, 0.14);
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(20, 27, 40, 0.92), rgba(15, 20, 31, 0.95));
+      color: rgba(213, 224, 238, 0.68);
       cursor: pointer;
-      text-decoration: none;
-      font-size: 12px;
-      font-weight: 620;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
-      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, color 160ms ease;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.03),
+        0 1px 1px rgba(8, 12, 18, 0.18);
+      transition:
+        transform 160ms ease,
+        border-color 160ms ease,
+        background 160ms ease,
+        color 160ms ease,
+        box-shadow 160ms ease;
     }
-    .theme-toggle .segment-item:hover {
+    .theme-toggle .segment-item.theme-toggle-button:hover {
       transform: translateY(-1px);
-      border-color: rgba(0, 113, 227, 0.24);
-      color: #005bb8;
+      border-color: rgba(255, 104, 111, 0.34);
+      color: rgba(245, 248, 252, 0.92);
     }
-    .theme-toggle .segment-item.active {
-      border-color: rgba(0, 113, 227, 0.32);
-      background: rgba(235, 245, 255, 0.96);
-      color: #005bb8;
+    .theme-toggle .segment-item.theme-toggle-button:focus-visible {
+      outline: none;
+      border-color: rgba(255, 104, 111, 0.42);
+      box-shadow:
+        0 0 0 3px rgba(255, 104, 111, 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+    .theme-toggle .segment-item.theme-toggle-button.active {
+      border-color: rgba(255, 92, 101, 0.72);
+      background:
+        linear-gradient(180deg, rgba(52, 25, 30, 0.96), rgba(38, 18, 23, 0.98)),
+        radial-gradient(circle at 50% 25%, rgba(255, 120, 120, 0.18), transparent 52%);
+      color: #ff737d;
+      box-shadow:
+        0 0 0 2px rgba(255, 92, 101, 0.18),
+        0 10px 24px rgba(101, 23, 31, 0.34),
+        inset 0 0 0 1px rgba(255, 139, 146, 0.24);
+    }
+    .theme-toggle-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+    }
+    .theme-toggle-icon svg {
+      width: 23px;
+      height: 23px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.85;
+      stroke-linecap: round;
+      stroke-linejoin: round;
     }
     .content-stack { margin-top: var(--space-2); display: grid; gap: var(--space-2); }
     .content-stack > #overview-decision-home { order: 1; }
@@ -9586,11 +9637,36 @@ function renderLanguageToggle(filters: TaskQueryFilters, options: DashboardOptio
 
 function renderThemeToggle(language: UiLanguage): string {
   const t = (en: string, zh: string): string => pickUiText(language, en, zh);
+  const icon = (kind: "auto" | "light" | "dark"): string => {
+    if (kind === "auto") {
+      return `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <rect x="4.5" y="5.5" width="15" height="10.5" rx="1.9"></rect>
+        <path d="M8.5 19h7"></path>
+      </svg>`;
+    }
+    if (kind === "light") {
+      return `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <circle cx="12" cy="12" r="4.2"></circle>
+        <path d="M12 2.5v2.7M12 18.8v2.7M21.5 12h-2.7M5.2 12H2.5M18.8 5.2l-1.9 1.9M7.1 16.9l-1.9 1.9M18.8 18.8l-1.9-1.9M7.1 7.1L5.2 5.2"></path>
+      </svg>`;
+    }
+    return `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M15.4 3.8a8.4 8.4 0 1 0 4.8 14.8A9.1 9.1 0 0 1 15.4 3.8z"></path>
+    </svg>`;
+  };
   return `<div class="theme-toggle" data-theme-toggle>
     <div class="theme-toggle-label">${escapeHtml(t("Theme", "主题"))}</div>
-    <button class="segment-item" type="button" data-theme-value="auto">${escapeHtml(t("Auto", "跟随系统"))}</button>
-    <button class="segment-item" type="button" data-theme-value="light">${escapeHtml(t("Light", "明亮"))}</button>
-    <button class="segment-item" type="button" data-theme-value="dark">${escapeHtml(t("Dark", "黑暗"))}</button>
+    <div class="theme-toggle-track" role="group" aria-label="${escapeHtml(t("Theme", "主题"))}">
+      <button class="segment-item theme-toggle-button" type="button" data-theme-value="auto" data-theme-label="${escapeHtml(t("Auto", "跟随系统"))}" aria-label="${escapeHtml(t("Auto", "跟随系统"))}" title="${escapeHtml(t("Auto", "跟随系统"))}">
+        <span class="theme-toggle-icon theme-toggle-icon-auto">${icon("auto")}</span>
+      </button>
+      <button class="segment-item theme-toggle-button" type="button" data-theme-value="light" data-theme-label="${escapeHtml(t("Light", "明亮"))}" aria-label="${escapeHtml(t("Light", "明亮"))}" title="${escapeHtml(t("Light", "明亮"))}">
+        <span class="theme-toggle-icon theme-toggle-icon-light">${icon("light")}</span>
+      </button>
+      <button class="segment-item theme-toggle-button" type="button" data-theme-value="dark" data-theme-label="${escapeHtml(t("Dark", "黑暗"))}" aria-label="${escapeHtml(t("Dark", "黑暗"))}" title="${escapeHtml(t("Dark", "黑暗"))}">
+        <span class="theme-toggle-icon theme-toggle-icon-dark">${icon("dark")}</span>
+      </button>
+    </div>
   </div>`;
 }
 
@@ -9626,7 +9702,8 @@ function renderThemePreferenceScript(language: UiLanguage): string {
         const active = normalizeMode(button.getAttribute('data-theme-value')) === nextMode;
         button.classList.toggle('active', active);
         button.setAttribute('aria-pressed', active ? 'true' : 'false');
-        button.setAttribute('title', labels[nextMode]);
+        const label = button.getAttribute('data-theme-label') || labels[normalizeMode(button.getAttribute('data-theme-value'))];
+        button.setAttribute('title', label);
       });
     });
     try {
