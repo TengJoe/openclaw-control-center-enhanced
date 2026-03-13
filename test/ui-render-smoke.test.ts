@@ -277,6 +277,7 @@ test("dashboard keeps global visibility as overview-only block", async () => {
   const source = await readFile("src/ui/server.ts", "utf8");
   const usageSource = await readFile("src/runtime/usage-cost.ts", "utf8");
   const readModelCacheSource = await readFile("src/runtime/ui-read-model-cache.ts", "utf8");
+  const globalVisibilitySource = await readFile("src/runtime/global-visibility.ts", "utf8");
   assert(source.includes('data-ui-polish="apple-native-v3"'));
   assert(source.includes("const globalVisibilityCard = renderGlobalVisibilityCard(globalVisibilityModel, options.language);"));
   assert(source.includes("const globalVisibilityQuickRows = ["));
@@ -287,9 +288,20 @@ test("dashboard keeps global visibility as overview-only block", async () => {
     ),
   );
   assert(source.includes('<div class="content-stack">${globalVisibilityBlock}${sectionBody}</div>'));
-  assert(source.includes("heartbeat: enabledHeartbeatCount"));
-  assert(source.includes("const toolCallsCount = input.toolCallsCount ?? (await countRecentToolCalls(snapshot, toolClient));"));
-  assert(source.includes("if (typeof item.toolEventCount === \"number\") return sum + item.toolEventCount;"));
+  assert(
+    source.includes("heartbeat: enabledHeartbeatCount") ||
+      globalVisibilitySource.includes("heartbeat: enabledHeartbeatCount"),
+  );
+  assert(
+    globalVisibilitySource.includes(
+      'typeof input.toolCallsCount === "number"\n      ? input.toolCallsCount\n      : await countRecentToolCalls(snapshot, toolClient)',
+    ) ||
+      globalVisibilitySource.includes("await countRecentToolCalls(snapshot, toolClient)"),
+  );
+  assert(
+    source.includes("if (typeof item.toolEventCount === \"number\") return sum + item.toolEventCount;") ||
+      globalVisibilitySource.includes("if (typeof item.toolEventCount === \"number\") return sum + item.toolEventCount;"),
+  );
   assert(source.includes("const scheduleSignalText = scheduleRow?.currentAction ?? noSignalText;"));
   assert(source.includes("<small>${escapeHtml(scheduleSignalText)}</small>"));
   assert(source.includes('const language: UiLanguage = hasExplicitLanguage ? resolvedLanguage : "zh";'));
@@ -336,11 +348,13 @@ test("dashboard keeps global visibility as overview-only block", async () => {
   assert(source.includes('route: "/digest/latest"'));
   assert(source.includes("void primeUiRenderCaches(toolClient);"));
   assert(source.includes("createUiReadModelCache("));
+  assert(source.includes("buildGlobalVisibilityViewModel("));
   assert(readModelCacheSource.includes("const sourceStamp = await readReadModelSourceStamp();"));
   assert(
     readModelCacheSource.includes("const sessions = mapSessionsListToSummariesImpl(live);") ||
       readModelCacheSource.includes("const sessions = mapSessionsListToSummaries(live);"),
   );
+  assert(globalVisibilitySource.includes("async function countRecentToolCalls("));
   assert(!source.includes('state: item.active ? "running" : "idle"'));
   assert(usageSource.includes("const USAGE_SOURCE_CACHE_TTL_MS = 10_000;"));
   assert(usageSource.includes("loadCachedRuntimeUsageData()"));

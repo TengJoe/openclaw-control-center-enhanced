@@ -56,7 +56,10 @@ export async function loadUiPreferences(): Promise<UiPreferencesLoadResult> {
   } catch (error) {
     const fallback = defaultUiPreferences();
     const reason = error instanceof Error ? error.message : "unable to read preference file";
-    issues = [`preferences fallback applied: ${reason}`];
+    const isMissingFile =
+      Boolean(error && typeof error === "object" && "code" in error && (error as { code?: string }).code === "ENOENT");
+    // In readonly mode, a missing preferences file is expected and should not spam logs.
+    issues = READONLY_MODE && isMissingFile ? [] : [`preferences fallback applied: ${reason}`];
     if (!READONLY_MODE) {
       await writeUiPreferences(fallback);
     }

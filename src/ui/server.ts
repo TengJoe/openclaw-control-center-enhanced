@@ -31,6 +31,13 @@ import {
 } from "../runtime/audit-timeline";
 import { loadLatestDigest, renderLatestDigestPage } from "../runtime/digest-renderer";
 import { buildExportBundle, writeExportBundle } from "../runtime/export-bundle";
+import {
+  buildGlobalVisibilityViewModel,
+  type GlobalVisibilityTaskRow,
+  type GlobalVisibilityTaskStatus,
+  type GlobalVisibilityViewModel,
+  type OpenclawCronJobSummary,
+} from "../runtime/global-visibility";
 import { buildHealthzPayload } from "../runtime/healthz";
 import { applyImportMutation, readImportMutationGuardState } from "../runtime/import-live";
 import { validateExportBundleDryRun, validateExportFileDryRun } from "../runtime/import-dry-run";
@@ -499,35 +506,6 @@ const uiReadModelCache = createUiReadModelCache({
   compareSessionSummariesByLatest,
 });
 
-type GlobalVisibilityTaskStatus = "done" | "not_done";
-
-interface GlobalVisibilityTaskRow {
-  taskType: "cron" | "heartbeat" | "current_task" | "tool_call";
-  taskTypeLabel: string;
-  taskName: string;
-  executor: string;
-  currentAction: string;
-  nextRun: string;
-  latestResult: string;
-  status: GlobalVisibilityTaskStatus;
-  nextAction: string;
-  detailsHref: string;
-  detailsLabel: string;
-}
-
-interface GlobalVisibilityViewModel {
-  tasks: GlobalVisibilityTaskRow[];
-  doneCount: number;
-  notDoneCount: number;
-  noTaskMessage: string;
-  signalCounts: {
-    schedule: number;
-    heartbeat: number;
-    currentTasks: number;
-    toolCalls: number;
-  };
-}
-
 interface GlobalVisibilityCopy {
   title: string;
   summary: string;
@@ -552,17 +530,6 @@ interface GlobalVisibilityCopy {
   detailsLabel: string;
   doneStatusText: string;
   notDoneStatusText: string;
-}
-
-interface OpenclawCronJobSummary {
-  jobId: string;
-  name: string;
-  enabled: boolean;
-  owner: string;
-  ownerAgentId?: string;
-  purpose: string;
-  scheduleLabel: string;
-  sourcePath: string;
 }
 
 interface AgentAnimalIdentity {
@@ -2051,219 +2018,6 @@ async function loadOpenclawCronCatalog(language: UiLanguage): Promise<OpenclawCr
   return [];
 }
 
-async function countRecentToolCalls(snapshot: ReadModelSnapshot, toolClient: ToolClient): Promise<number> {
-  if (!Array.isArray(snapshot.sessions) || snapshot.sessions.length === 0) return 0;
-  const recentSessions = await listSessionConversations({
-    snapshot,
-    client: toolClient,
-    filters: {},
-    page: 1,
-    pageSize: 20,
-    historyLimit: 6,
-  });
-  return recentSessions.items.reduce((sum, item) => {
-    if (typeof item.toolEventCount === "number") return sum + item.toolEventCount;
-    return sum + (item.latestKind === "tool_event" ? 1 : 0);
-  }, 0);
-}
-
-async function buildGlobalVisibilityViewModel(
-  snapshot: ReadModelSnapshot,
-  toolClient: ToolClient,
-  language: UiLanguage,
-  input: {
-    cronOverview?: Awaited<ReturnType<typeof buildCronOverview>>;
-    openclawCronJobs?: OpenclawCronJobSummary[];
-    currentTasksCount?: number;
-    strongTaskEvidenceCount?: number;
-    followupTaskEvidenceCount?: number;
-    weakTaskEvidenceCount?: number;
-    toolCallsCount?: number;
-  } = {},
-): Promise<GlobalVisibilityViewModel> {
-  const cronOverview = input.cronOverview ?? (await buildCronOverview(snapshot, POLLING_INTERVALS_MS.cron));
-  const openclawCronJobs = input.openclawCronJobs ?? (await loadOpenclawCronCatalog(language));
-  const inProgressCount = snapshot.tasksSummary.inProgress ?? 0;
-  const blockedCount = snapshot.tasksSummary.blocked ?? 0;
-  const strongTaskEvidenceCount =
-    typeof input.strongTaskEvidenceCount === "number" ? input.strongTaskEvidenceCount : Math.max(0, inProgressCount - blockedCount);
-  const followupTaskEvidenceCount = typeof input.followupTaskEvidenceCount === "number" ? input.followupTaskEvidenceCount : 0;
-  const weakTaskEvidenceCount = typeof input.weakTaskEvidenceCount === "number" ? input.weakTaskEvidenceCount : blockedCount;
-  const currentTasksCount =
-    input.currentTasksCount ?? Math.max(inProgressCount + blockedCount, strongTaskEvidenceCount + followupTaskEvidenceCount + weakTaskEvidenceCount);
-  const hasWeakEvidence = weakTaskEvidenceCount > 0;
-  const toolCallsCount = input.toolCallsCount ?? (await countRecentToolCalls(snapshot, toolClient));
-  const nonHeartbeatRuntimeCronJobs = cronOverview.jobs.filter((job) => !job.jobId.toLowerCase().includes("heartbeat"));
-  const heartbeatJobs = cronOverview.jobs.filter((job) => job.jobId.toLowerCase().includes("heartbeat"));
-  const enabledRuntimeCronJobs = nonHeartbeatRuntimeCronJobs.filter((job) => job.enabled);
-  const enabledOpenclawCronJobs = openclawCronJobs.filter((job) => job.enabled);
-  const enabledCronCount = new Set([
-    ...enabledRuntimeCronJobs.map((job) => job.jobId),
-    ...enabledOpenclawCronJobs.map((job) => job.jobId),
-  ]).size;
-  const enabledHeartbeatCount = heartbeatJobs.filter((job) => job.enabled).length;
-  const heartbeatEnabled = heartbeatJobs.some((job) => job.enabled);
-  const latestHeartbeatRun = (await readTaskHeartbeatRuns(1)).runs[0];
-  const cronTaskName =
-    enabledCronCount > 0
-      ? pickUiText(language, `${enabledCronCount} jobs enabled`, `已启用 ${enabledCronCount} 个任务`)
-      : pickUiText(language, "No timed jobs", "暂无定时任务");
-  const cronOwner =
-    enabledOpenclawCronJobs.length > 0
-      ? summarizeNames(
-          enabledOpenclawCronJobs.map((job) => job.owner),
-          language,
-          pickUiText(language, "Scheduler", "调度器"),
-        )
-      : formatExecutorAgentLabel("system-cron", language);
-  const cronPurpose =
-    (enabledOpenclawCronJobs[0]?.purpose ? sanitizeCronPurposeText(enabledOpenclawCronJobs[0]?.purpose, language, 56) : "") ||
-    (enabledRuntimeCronJobs[0] ? cronRuntimePurpose(enabledRuntimeCronJobs[0].jobId, language) : pickUiText(language, "No timed job is running.", "当前没有定时任务在运行。"));
-  const cronNextRun =
-    nonHeartbeatRuntimeCronJobs.find((job) => job.enabled)?.nextRunAt ??
-    cronOverview.nextRunAt ??
-    pickUiText(language, "Not scheduled", "未排程");
-  const heartbeatNextRun =
-    heartbeatJobs.find((job) => job.enabled)?.nextRunAt ??
-    heartbeatJobs[0]?.nextRunAt ??
-    pickUiText(language, "Not scheduled", "未排程");
-  const heartbeatTaskName = pickUiText(language, "Task heartbeat service", "任务心跳服务");
-  const heartbeatLatestResult = heartbeatEnabled
-    ? latestHeartbeatRun
-      ? pickUiText(
-          language,
-          `Last heartbeat: selected ${latestHeartbeatRun.selected} tasks, started ${latestHeartbeatRun.executed}.`,
-          `最近心跳：挑出 ${latestHeartbeatRun.selected} 个任务，启动 ${latestHeartbeatRun.executed} 个。`,
-        )
-      : pickUiText(
-          language,
-          `Active heartbeat checks: ${enabledHeartbeatCount}.`,
-          `已开启任务心跳：${enabledHeartbeatCount} 个。`,
-        )
-    : pickUiText(language, "No heartbeat check yet.", "还没有任务心跳记录。");
-  const heartbeatPurpose = pickUiText(
-    language,
-    "Check assigned tasks and start the picked ones.",
-    "检查已分配任务，并启动挑中的任务。",
-  );
-  const scheduleReady = enabledCronCount > 0;
-
-  const rows: GlobalVisibilityTaskRow[] = [
-    {
-      taskType: "cron",
-      taskTypeLabel: pickUiText(language, "Timed jobs", "定时任务"),
-      taskName: cronTaskName,
-      executor: cronOwner,
-      currentAction: scheduleReady
-        ? pickUiText(language, `Now running: ${cronPurpose}`, `正在执行：${cronPurpose}`)
-        : pickUiText(language, "Timed jobs are off.", "还没有设置定时任务。"),
-      nextRun: cronNextRun,
-      latestResult: scheduleReady
-        ? pickUiText(
-          language,
-          `Active timed jobs: ${enabledCronCount}.`,
-          `已开启定时任务：${enabledCronCount} 个。`,
-        )
-        : pickUiText(language, "No timed job yet.", "还没有定时任务记录。"),
-      status: scheduleReady ? "done" : "not_done",
-      nextAction: scheduleReady
-        ? pickUiText(language, "Keep timed jobs on and keep each job goal clear.", "保持定时任务开启，并确认每个任务目标清楚。")
-        : pickUiText(language, "Turn on one timed job.", "先添加一个定时任务。"),
-      detailsHref: buildGlobalVisibilityDetailHref("cron", language),
-      detailsLabel: pickUiText(language, "See timed jobs", "查看定时任务"),
-    },
-    {
-      taskType: "heartbeat",
-      taskTypeLabel: pickUiText(language, "Heartbeat", "任务心跳"),
-      taskName: heartbeatTaskName,
-      executor: formatExecutorAgentLabel("task-heartbeat-worker", language),
-      currentAction: heartbeatEnabled
-        ? pickUiText(language, `Heartbeat is on: ${heartbeatPurpose}`, `任务心跳已开启：${heartbeatPurpose}`)
-        : pickUiText(language, "Heartbeat is off.", "还没有设置任务心跳。"),
-      nextRun: heartbeatNextRun,
-      latestResult: heartbeatLatestResult,
-      status: heartbeatEnabled ? "done" : "not_done",
-      nextAction: heartbeatEnabled
-        ? pickUiText(language, "Check picked tasks and confirm the choices look right.", "查看挑出的任务，确认挑选结果是否合理。")
-        : pickUiText(language, "Turn on heartbeat.", "在定时任务里开启心跳。"),
-      detailsHref: buildGlobalVisibilityDetailHref("heartbeat", language),
-      detailsLabel: pickUiText(language, "See heartbeat checks", "查看任务心跳"),
-    },
-    {
-      taskType: "current_task",
-      taskTypeLabel: pickUiText(language, "Current tasks", "当前任务"),
-      taskName: pickUiText(language, "Current tasks", "当前任务"),
-      executor: pickUiText(language, "Task owners", "任务智能体"),
-      currentAction:
-        currentTasksCount > 0
-          ? hasWeakEvidence
-            ? pickUiText(language, "Some current tasks still need follow-up.", "有些当前任务还需要继续跟进。")
-            : pickUiText(language, "Current tasks are visible in runtime.", "当前任务已经能在运行时里看见。")
-          : pickUiText(language, "No current task signal is visible now.", "当前还没有看见任务执行信号。"),
-      nextRun: pickUiText(language, "Live update", "实时更新"),
-      latestResult:
-        currentTasksCount > 0
-          ? hasWeakEvidence
-            ? pickUiText(
-                language,
-                `${strongTaskEvidenceCount} confirmed live, ${followupTaskEvidenceCount} need follow-up, ${weakTaskEvidenceCount} need inspection.`,
-                `${strongTaskEvidenceCount} 个已确认在跑，${followupTaskEvidenceCount} 个需跟进，${weakTaskEvidenceCount} 个需排查。`,
-              )
-            : pickUiText(language, `${currentTasksCount} current tasks are backed by runtime signals.`, `${currentTasksCount} 个当前任务已有运行信号支撑。`)
-          : pickUiText(language, "No current task signal yet.", "当前还没有任务执行信号。"),
-      status: currentTasksCount > 0 && !hasWeakEvidence ? "done" : "not_done",
-      nextAction:
-        currentTasksCount > 0
-          ? hasWeakEvidence
-            ? pickUiText(language, "Open current tasks and inspect the follow-up items first.", "打开当前任务，先检查需要跟进的项。")
-            : pickUiText(language, "Keep following the runtime signals.", "继续盯住运行时信号即可。")
-          : pickUiText(language, "Start one task and let runtime evidence appear first.", "先启动一个任务，让运行证据出现。"),
-      detailsHref: buildGlobalVisibilityDetailHref("current_task", language),
-      detailsLabel: pickUiText(language, "See current tasks", "查看当前任务"),
-    },
-    {
-      taskType: "tool_call",
-      taskTypeLabel: pickUiText(language, "Tool calls", "工具调用"),
-      taskName: pickUiText(language, "Tool calls", "工具调用"),
-      executor: pickUiText(language, "Active sessions", "活跃会话"),
-      currentAction:
-        toolCallsCount > 0
-          ? pickUiText(language, "Tools were used recently.", "最近有工具在使用。")
-          : pickUiText(language, "No tool use yet.", "最近没有工具在使用。"),
-      nextRun: pickUiText(language, "Live update", "实时更新"),
-      latestResult:
-        toolCallsCount > 0
-          ? pickUiText(language, `Tool calls in recent activity: ${toolCallsCount}.`, `最近工具调用：${toolCallsCount} 次。`)
-          : pickUiText(language, "No tool calls yet.", "尚无工具调用记录。"),
-      status: toolCallsCount > 0 ? "done" : "not_done",
-      nextAction:
-        toolCallsCount > 0
-          ? pickUiText(language, "Review results and keep going.", "看下结果后继续。")
-          : pickUiText(language, "Run one small tool step.", "先跑一次小工具步骤。"),
-      detailsHref: buildGlobalVisibilityDetailHref("tool_call", language),
-      detailsLabel: pickUiText(language, "See tool calls", "查看工具调用"),
-    },
-  ];
-
-  const doneCount = rows.filter((row) => row.status === "done").length;
-  return {
-    tasks: rows,
-    doneCount,
-    notDoneCount: rows.length - doneCount,
-    noTaskMessage: pickUiText(
-      language,
-      "No timed jobs, heartbeat, current tasks, or tool calls yet.",
-      "暂无定时任务、任务心跳、当前任务或工具调用。",
-    ),
-    signalCounts: {
-      schedule: enabledCronCount,
-      heartbeat: enabledHeartbeatCount,
-      currentTasks: currentTasksCount,
-      toolCalls: toolCallsCount,
-    },
-  };
-}
-
 function dashboardSectionLinks(language: UiLanguage): DashboardSectionLink[] {
   return DASHBOARD_SECTION_LINKS_EN.map((item) => {
     if (language !== "zh") return item;
@@ -3619,14 +3373,26 @@ async function renderHtml(
   const stalledRunningSessionCount = countStalledRunningSessions(snapshot.sessions, taskSignalItems, nowMs);
   const runtimeIssueCount = runtimeSessionIssueCount + stalledRunningSessionCount;
   const globalVisibilityModel = needsGlobalVisibility
-    ? await buildGlobalVisibilityViewModel(snapshot, toolClient, options.language, {
-        cronOverview,
-        openclawCronJobs,
-        currentTasksCount: taskCertaintyCards.length,
-        strongTaskEvidenceCount: taskCertaintyStrongCount,
-        followupTaskEvidenceCount: taskCertaintyFollowupCount,
-        weakTaskEvidenceCount: taskCertaintyWeakCount,
-      })
+    ? await buildGlobalVisibilityViewModel(
+        snapshot,
+        toolClient,
+        options.language,
+        {
+          t,
+          cronOverview,
+          openclawCronJobs,
+          formatExecutorAgentLabel,
+          cronRuntimePurpose,
+          summarizeNames,
+          buildGlobalVisibilityDetailHref,
+        },
+        {
+          currentTasksCount: taskCertaintyCards.length,
+          strongTaskEvidenceCount: taskCertaintyStrongCount,
+          followupTaskEvidenceCount: taskCertaintyFollowupCount,
+          weakTaskEvidenceCount: taskCertaintyWeakCount,
+        },
+      )
     : {
         tasks: [],
         doneCount: 0,

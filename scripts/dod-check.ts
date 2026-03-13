@@ -225,6 +225,7 @@ function findMissingGroups(input: string, groups: PhraseGroup[]): string[] {
 
 async function auditProductSource(uiServerPath: string): Promise<ProductSourceAudit> {
   let source = "";
+  let globalVisibilitySource = "";
   try {
     source = await readFile(uiServerPath, "utf8");
   } catch (error) {
@@ -244,22 +245,33 @@ async function auditProductSource(uiServerPath: string): Promise<ProductSourceAu
       },
     };
   }
+  try {
+    globalVisibilitySource = await readFile(
+      resolve(dirname(uiServerPath), "..", "runtime", "global-visibility.ts"),
+      "utf8",
+    );
+  } catch {
+    globalVisibilitySource = "";
+  }
 
   const copyBlock = source.match(
     /function globalVisibilityCopy[\s\S]*?function formatExecutorAgentLabel/,
   )?.[0];
-  const modelBlock = source.match(
-    /async function buildGlobalVisibilityViewModel[\s\S]*?function dashboardSectionLinks/,
-  )?.[0];
+  const modelBlock =
+    globalVisibilitySource.match(/export async function buildGlobalVisibilityViewModel[\s\S]*?function sanitizeCronPurposeText/)?.[0] ??
+    source.match(/async function buildGlobalVisibilityViewModel[\s\S]*?function dashboardSectionLinks/)?.[0];
   const globalVisibilityBlock =
-    [copyBlock, modelBlock]
+    [copyBlock, modelBlock, globalVisibilitySource]
       .filter((segment): segment is string => typeof segment === "string" && segment.length > 0)
       .join("\n\n")
       .trim() || source;
+  const combinedSource = [source, globalVisibilitySource]
+    .filter((segment) => segment.trim().length > 0)
+    .join("\n\n");
   const missingZh = findMissingGroups(globalVisibilityBlock, REQUIRED_ZH_GROUPS);
   const missingEn = findMissingGroups(globalVisibilityBlock, REQUIRED_EN_GROUPS);
-  const missingRender = findMissingPhrases(source, GLOBAL_VISIBILITY_RENDER_TOKENS);
-  const missingRenderGroups = findMissingGroups(source, GLOBAL_VISIBILITY_RENDER_GROUPS);
+  const missingRender = findMissingPhrases(combinedSource, GLOBAL_VISIBILITY_RENDER_TOKENS);
+  const missingRenderGroups = findMissingGroups(combinedSource, GLOBAL_VISIBILITY_RENDER_GROUPS);
   const missingAppleNativeTokens = findMissingPhrases(source, APPLE_NATIVE_UI_RENDER_TOKENS);
   const missingAppleNativeGroups = findMissingGroups(source, APPLE_NATIVE_UI_RENDER_GROUPS);
   const matchedMixedZh = MIXED_ZH_PHRASES.filter((phrase) => globalVisibilityBlock.includes(phrase));
