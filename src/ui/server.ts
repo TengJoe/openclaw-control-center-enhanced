@@ -11116,6 +11116,29 @@ function renderNativeMotionScript(language: UiLanguage = "zh"): string {
     window.location.href = href;
   });
 
+  const prefetchedHrefs = new Set();
+  const warmHref = (href) => {
+    if (!href || prefetchedHrefs.has(href)) return;
+    if (href.startsWith('http') || href.startsWith('mailto:') || href.startsWith('#') || href.startsWith('/api/')) return;
+    prefetchedHrefs.add(href);
+    fetch(href, {
+      credentials: 'same-origin',
+      headers: {
+        'x-requested-with': 'openclaw-prefetch',
+      },
+    }).catch(() => {
+      prefetchedHrefs.delete(href);
+    });
+  };
+
+  document.querySelectorAll('a.nav-link[href], a.quick-link[href], .card a[href]').forEach((node) => {
+    if (!(node instanceof HTMLAnchorElement)) return;
+    const href = node.getAttribute('href') || '';
+    node.addEventListener('mouseenter', () => warmHref(href), { passive: true });
+    node.addEventListener('focus', () => warmHref(href), { passive: true });
+    node.addEventListener('touchstart', () => warmHref(href), { passive: true, once: true });
+  });
+
   const panel = document.querySelector('.panel');
   const compactDetails = Array.from(document.querySelectorAll('details.card.compact-details'));
   compactDetails.forEach((details) => {
