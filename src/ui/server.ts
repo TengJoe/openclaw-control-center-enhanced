@@ -8197,6 +8197,100 @@ async function renderHtml(
       border-color: rgba(244, 215, 154, 0.24) !important;
       background: rgba(54, 36, 10, 0.98) !important;
     }
+    /* Ultra-final dark-mode clamp for remaining overview/usage/team white panels. */
+    body[data-ui-theme-resolved="dark"] #overview-secondary-shell .exec-card,
+    body[data-ui-theme-resolved="dark"] #overview-secondary-shell .exec-card *,
+    body[data-ui-theme-resolved="dark"] #global-visibility-card .status-chip,
+    body[data-ui-theme-resolved="dark"] #global-visibility-card .status-chip *,
+    body[data-ui-theme-resolved="dark"] #global-visibility-card .summary-gauge-card,
+    body[data-ui-theme-resolved="dark"] #global-visibility-card .summary-gauge-card *,
+    body[data-ui-theme-resolved="dark"] #global-visibility-card .signal-gauge-card,
+    body[data-ui-theme-resolved="dark"] #global-visibility-card .signal-gauge-card *,
+    body[data-ui-theme-resolved="dark"] #usage-pulse .usage-chip,
+    body[data-ui-theme-resolved="dark"] #usage-pulse .usage-chip *,
+    body[data-ui-theme-resolved="dark"] .subscription-pill,
+    body[data-ui-theme-resolved="dark"] .subscription-pill *,
+    body[data-ui-theme-resolved="dark"] .quota-row,
+    body[data-ui-theme-resolved="dark"] .quota-row *,
+    body[data-ui-theme-resolved="dark"] .pie-hole,
+    body[data-ui-theme-resolved="dark"] .pie-hole *,
+    body[data-ui-theme-resolved="dark"] .pie-legend li,
+    body[data-ui-theme-resolved="dark"] .pie-legend li *,
+    body[data-ui-theme-resolved="dark"] .office-card,
+    body[data-ui-theme-resolved="dark"] .office-card *,
+    body[data-ui-theme-resolved="dark"] .staff-brief-card,
+    body[data-ui-theme-resolved="dark"] .staff-brief-card *,
+    body[data-ui-theme-resolved="dark"] .staff-avatar,
+    body[data-ui-theme-resolved="dark"] .staff-avatar *,
+    body[data-ui-theme-resolved="dark"] .agent-avatar,
+    body[data-ui-theme-resolved="dark"] .agent-avatar *,
+    body[data-ui-theme-resolved="dark"] .memory-row,
+    body[data-ui-theme-resolved="dark"] .memory-row *,
+    body[data-ui-theme-resolved="dark"] .file-sidebar,
+    body[data-ui-theme-resolved="dark"] .file-sidebar *,
+    body[data-ui-theme-resolved="dark"] .file-editor-panel,
+    body[data-ui-theme-resolved="dark"] .file-editor-panel *,
+    body[data-ui-theme-resolved="dark"] .file-nav-item,
+    body[data-ui-theme-resolved="dark"] .file-nav-item *,
+    body[data-ui-theme-resolved="dark"] .file-facet-switch .segment-item,
+    body[data-ui-theme-resolved="dark"] .docs-search input,
+    body[data-ui-theme-resolved="dark"] .docs-source-filter-wrap select,
+    body[data-ui-theme-resolved="dark"] .file-filter-input,
+    body[data-ui-theme-resolved="dark"] .file-token-input,
+    body[data-ui-theme-resolved="dark"] .file-editor-textarea {
+      color: #eef5fb !important;
+    }
+    body[data-ui-theme-resolved="dark"] #overview-secondary-shell .exec-card,
+    body[data-ui-theme-resolved="dark"] #global-visibility-card .status-chip,
+    body[data-ui-theme-resolved="dark"] #global-visibility-card .summary-gauge-card,
+    body[data-ui-theme-resolved="dark"] #global-visibility-card .signal-gauge-card,
+    body[data-ui-theme-resolved="dark"] #usage-pulse .usage-chip,
+    body[data-ui-theme-resolved="dark"] .subscription-pill,
+    body[data-ui-theme-resolved="dark"] .quota-row,
+    body[data-ui-theme-resolved="dark"] .pie-hole,
+    body[data-ui-theme-resolved="dark"] .pie-legend li,
+    body[data-ui-theme-resolved="dark"] .office-card,
+    body[data-ui-theme-resolved="dark"] .staff-brief-card,
+    body[data-ui-theme-resolved="dark"] .staff-avatar,
+    body[data-ui-theme-resolved="dark"] .agent-avatar,
+    body[data-ui-theme-resolved="dark"] .memory-row,
+    body[data-ui-theme-resolved="dark"] .file-sidebar,
+    body[data-ui-theme-resolved="dark"] .file-editor-panel,
+    body[data-ui-theme-resolved="dark"] .file-nav-item,
+    body[data-ui-theme-resolved="dark"] .file-facet-switch .segment-item,
+    body[data-ui-theme-resolved="dark"] .docs-search input,
+    body[data-ui-theme-resolved="dark"] .docs-source-filter-wrap select,
+    body[data-ui-theme-resolved="dark"] .file-filter-input,
+    body[data-ui-theme-resolved="dark"] .file-token-input,
+    body[data-ui-theme-resolved="dark"] .file-editor-textarea,
+    body[data-ui-theme-resolved="dark"] .segment-switch {
+      background: linear-gradient(180deg, rgba(13, 24, 36, 0.995), rgba(17, 31, 46, 0.98)) !important;
+      border-color: rgba(132, 164, 201, 0.24) !important;
+      box-shadow: 0 16px 32px rgba(2, 8, 14, 0.28) !important;
+    }
+    body[data-ui-theme-resolved="dark"] .badge.connected,
+    body[data-ui-theme-resolved="dark"] .badge.done {
+      color: #8fe0a9 !important;
+      background: rgba(13, 39, 25, 0.98) !important;
+      border-color: rgba(143, 224, 169, 0.24) !important;
+    }
+    body[data-ui-theme-resolved="dark"] .badge.not_connected,
+    body[data-ui-theme-resolved="dark"] .badge.not_done {
+      color: #d7e2ee !important;
+      background: rgba(21, 32, 44, 0.98) !important;
+      border-color: rgba(201, 213, 227, 0.2) !important;
+    }
+    body[data-ui-theme-resolved="dark"] .badge.partial {
+      color: #f4d79a !important;
+      background: rgba(54, 36, 10, 0.98) !important;
+      border-color: rgba(244, 215, 154, 0.24) !important;
+    }
+    body[data-ui-theme-resolved="dark"] .quota-track,
+    body[data-ui-theme-resolved="dark"] .summary-track,
+    body[data-ui-theme-resolved="dark"] .bar-track {
+      background: rgba(42, 59, 78, 0.94) !important;
+      border-color: rgba(132, 164, 201, 0.2) !important;
+    }
   </style>
 </head>
 <body class="ui-preload" data-ui-polish="apple-native-v3" data-apple-window-controls="true" data-ui-language="${escapeHtml(options.language)}" data-ui-theme="auto" data-ui-theme-resolved="light" style="--fold-open-label:${options.language === "en" ? "'Expand'" : "'展开'"}; --fold-close-label:${options.language === "en" ? "'Collapse'" : "'收起'"};">
