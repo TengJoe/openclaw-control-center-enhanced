@@ -276,6 +276,7 @@ test("execution chain cards keep raw JSON out of visible titles and summaries", 
 test("dashboard keeps global visibility as overview-only block", async () => {
   const source = await readFile("src/ui/server.ts", "utf8");
   const usageSource = await readFile("src/runtime/usage-cost.ts", "utf8");
+  const readModelCacheSource = await readFile("src/runtime/ui-read-model-cache.ts", "utf8");
   assert(source.includes('data-ui-polish="apple-native-v3"'));
   assert(source.includes("const globalVisibilityCard = renderGlobalVisibilityCard(globalVisibilityModel, options.language);"));
   assert(source.includes("const globalVisibilityQuickRows = ["));
@@ -334,8 +335,9 @@ test("dashboard keeps global visibility as overview-only block", async () => {
   assert(source.includes('route: "/audit"'));
   assert(source.includes('route: "/digest/latest"'));
   assert(source.includes("void primeUiRenderCaches(toolClient);"));
-  assert(source.includes("const sourceStamp = await readReadModelSourceStamp();"));
-  assert(source.includes("const sessions = mapSessionsListToSummaries(live);"));
+  assert(source.includes("createUiReadModelCache("));
+  assert(readModelCacheSource.includes("const sourceStamp = await readReadModelSourceStamp();"));
+  assert(readModelCacheSource.includes("const sessions = mapSessionsListToSummaries(live);"));
   assert(!source.includes('state: item.active ? "running" : "idle"'));
   assert(usageSource.includes("const USAGE_SOURCE_CACHE_TTL_MS = 10_000;"));
   assert(usageSource.includes("loadCachedRuntimeUsageData()"));
