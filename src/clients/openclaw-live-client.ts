@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { readdir, readFile } from "node:fs/promises";
+import { open, readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import type {
@@ -25,6 +25,16 @@ interface SessionCacheItem {
   outputTokens?: number;
   totalTokens?: number;
   sessionFile?: string;
+}
+
+interface OpenClawLiveClientDeps {
+  readSessionHistoryFile?: (
+    sessionFile: string,
+    limit: number,
+  ) => Promise<SessionsHistoryResponse | undefined>;
+  probeSessionHistoryCliSupport?: () => Promise<boolean>;
+  runSessionHistoryJson?: (args: string[]) => Promise<Record<string, unknown>>;
+  runSessionHistoryText?: (sessionKey: string, limit: number) => Promise<string>;
 }
 
 const ACTIVE_SESSION_STATES = new Set([
@@ -66,6 +76,10 @@ const FALLBACK_ACTIVE_RECENCY_WINDOW_MS = 45 * 60 * 1000;
 export class OpenClawLiveClient implements ToolClient {
   private sessionCache = new Map<string, SessionCacheItem>();
   private sessionFileCache = new Map<string, string>();
+  private sessionHistoryCliSupported: boolean | undefined;
+  private sessionHistoryCliSupportInFlight: Promise<boolean> | undefined;
+
+  constructor(private readonly deps: OpenClawLiveClientDeps = {}) {}
 
   async sessionsList(): Promise<SessionsListResponse> {
     const openclawHome = resolveOpenClawHomePath();
@@ -135,14 +149,24 @@ export class OpenClawLiveClient implements ToolClient {
     }
 
     const limit = normalizeLimit(request.limit);
+    const readHistoryFromFile = this.deps.readSessionHistoryFile ?? readSessionHistoryFile;
     let sessionFile = this.sessionCache.get(sessionKey)?.sessionFile;
     if (!sessionFile) {
       sessionFile = await this.lookupSessionFile(sessionKey);
     }
     if (sessionFile) {
-      const fromFile = await readSessionHistoryFile(sessionFile, limit);
+      const fromFile = await readHistoryFromFile(sessionFile, limit);
       if (fromFile) return fromFile;
     }
+
+    if (!(await this.supportsSessionHistoryCli())) {
+      return { rawText: "" };
+    }
+
+    const runSessionHistoryJson =
+      this.deps.runSessionHistoryJson ??
+      ((args: string[]) => runJson<Record<string, unknown>>(args, { timeoutMs: 2_500, maxBuffer: 512 * 1024 }));
+    const runSessionHistoryText = this.deps.runSessionHistoryText ?? runHistoryText;
     const attempts: string[][] = [
       ["sessions", "history", sessionKey, "--json", "--limit", String(limit)],
       ["sessions", "history", sessionKey, "--limit", String(limit), "--json"],
@@ -151,7 +175,7 @@ export class OpenClawLiveClient implements ToolClient {
 
     for (const args of attempts) {
       try {
-        const json = await runJson<Record<string, unknown>>(args);
+        const json = await runSessionHistoryJson(args);
         return {
           json,
           rawText: JSON.stringify(json),
@@ -162,7 +186,7 @@ export class OpenClawLiveClient implements ToolClient {
     }
 
     try {
-      const rawText = await runHistoryText(sessionKey, limit);
+      const rawText = await runSessionHistoryText(sessionKey, limit);
       return normalizeRawHistoryText(rawText, limit);
     } catch {
       return { rawText: "" };
@@ -354,6 +378,32 @@ export class OpenClawLiveClient implements ToolClient {
     const catalog = await loadCurrentAgentCatalog();
     return new Set(catalog.entries.map((entry) => normalizeAgentKey(entry.agentId)));
   }
+
+  private async supportsSessionHistoryCli(): Promise<boolean> {
+    if (typeof this.sessionHistoryCliSupported === "boolean") {
+      return this.sessionHistoryCliSupported;
+    }
+    if (this.sessionHistoryCliSupportInFlight) {
+      return this.sessionHistoryCliSupportInFlight;
+    }
+
+    const probe = this.deps.probeSessionHistoryCliSupport ?? probeSessionHistoryCliSupport;
+    const nextValue = (async () => {
+      try {
+        const supported = await probe();
+        this.sessionHistoryCliSupported = supported;
+        return supported;
+      } catch {
+        this.sessionHistoryCliSupported = false;
+        return false;
+      } finally {
+        this.sessionHistoryCliSupportInFlight = undefined;
+      }
+    })();
+
+    this.sessionHistoryCliSupportInFlight = nextValue;
+    return nextValue;
+  }
 }
 
 async function runJson<T>(args: string[], options?: { timeoutMs?: number; maxBuffer?: number }): Promise<T> {
@@ -386,6 +436,21 @@ async function runHistoryText(sessionKey: string, limit: number): Promise<string
   return lines.slice(-limit).join("\n");
 }
 
+async function probeSessionHistoryCliSupport(): Promise<boolean> {
+  try {
+    await runText(["sessions", "history", "--help"], {
+      timeoutMs: 1_500,
+      maxBuffer: 128 * 1024,
+    });
+    return true;
+  } catch (error) {
+    if (looksLikeMissingSessionHistoryCommand(error)) {
+      return false;
+    }
+    return false;
+  }
+}
+
 function normalizeRawHistoryText(rawText: string, limit: number): SessionsHistoryResponse {
   const trimmed = rawText.trim();
   if (trimmed === "") return { rawText };
@@ -402,6 +467,13 @@ function normalizeRawHistoryText(rawText: string, limit: number): SessionsHistor
 function isUnknownLimitOptionError(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
   return /unknown option '--limit'/.test(error.message);
+}
+
+function looksLikeMissingSessionHistoryCommand(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  return /too many arguments for 'sessions'|expected 0 arguments but got|unknown command ['"]?history|unknown subcommand|no help topic for/i.test(
+    error.message,
+  );
 }
 
 function asString(v: unknown): string | undefined {
@@ -430,19 +502,73 @@ async function readSessionHistoryFile(
   limit: number,
 ): Promise<SessionsHistoryResponse | undefined> {
   try {
-    const { stdout } = await execFileAsync("tail", ["-n", String(Math.max(limit * 8, 80)), sessionFile], {
-      timeout: 5_000,
-      maxBuffer: 512 * 1024,
-    });
-    return normalizeSessionHistoryChunk(stdout, limit);
+    const raw = await readRecentSessionHistoryTail(sessionFile, Math.max(limit * 8, 80));
+    if (typeof raw === "string") {
+      const normalized = normalizeSessionHistoryChunk(raw, limit);
+      if (normalized.rawText.trim() !== "") {
+        return normalized;
+      }
+    }
   } catch {
-    try {
-      const raw = await readFile(sessionFile, "utf8");
-      return normalizeSessionHistoryChunk(raw, limit);
-    } catch {
-      return undefined;
+    // Fall through to a full file read below.
+  }
+
+  try {
+    const raw = await readFile(sessionFile, "utf8");
+    return normalizeSessionHistoryChunk(raw, limit);
+  } catch {
+    return undefined;
+  }
+}
+
+async function readRecentSessionHistoryTail(
+  sessionFile: string,
+  targetLineCount: number,
+): Promise<string | undefined> {
+  let fileHandle:
+    | Awaited<ReturnType<typeof open>>
+    | undefined;
+
+  try {
+    fileHandle = await open(sessionFile, "r");
+    const stats = await fileHandle.stat();
+    if (stats.size <= 0) return "";
+
+    let position = stats.size;
+    let newlineCount = 0;
+    const chunks: Buffer[] = [];
+
+    while (position > 0 && newlineCount <= targetLineCount) {
+      const chunkSize = Math.min(64 * 1024, position);
+      position -= chunkSize;
+      const buffer = Buffer.alloc(chunkSize);
+      const { bytesRead } = await fileHandle.read(buffer, 0, chunkSize, position);
+      const slice = bytesRead === chunkSize ? buffer : buffer.subarray(0, bytesRead);
+      chunks.unshift(slice);
+      newlineCount += countNewlines(slice);
+    }
+
+    let raw = Buffer.concat(chunks).toString("utf8");
+    if (position > 0) {
+      const newlineIndex = raw.indexOf("\n");
+      raw = newlineIndex >= 0 ? raw.slice(newlineIndex + 1) : "";
+    }
+    return raw;
+  } catch {
+    return undefined;
+  } finally {
+    if (fileHandle) {
+      await fileHandle.close().catch(() => undefined);
     }
   }
+}
+
+function countNewlines(buffer: Uint8Array): number {
+  let count = 0;
+  for (const byte of buffer) {
+    if (byte === 10) count += 1;
+  }
+  return count;
 }
 
 function normalizeSessionHistoryChunk(raw: string, limit: number): SessionsHistoryResponse {
