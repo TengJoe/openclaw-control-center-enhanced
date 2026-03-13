@@ -337,7 +337,10 @@ test("dashboard keeps global visibility as overview-only block", async () => {
   assert(source.includes("void primeUiRenderCaches(toolClient);"));
   assert(source.includes("createUiReadModelCache("));
   assert(readModelCacheSource.includes("const sourceStamp = await readReadModelSourceStamp();"));
-  assert(readModelCacheSource.includes("const sessions = mapSessionsListToSummaries(live);"));
+  assert(
+    readModelCacheSource.includes("const sessions = mapSessionsListToSummariesImpl(live);") ||
+      readModelCacheSource.includes("const sessions = mapSessionsListToSummaries(live);"),
+  );
   assert(!source.includes('state: item.active ? "running" : "idle"'));
   assert(usageSource.includes("const USAGE_SOURCE_CACHE_TTL_MS = 10_000;"));
   assert(usageSource.includes("loadCachedRuntimeUsageData()"));

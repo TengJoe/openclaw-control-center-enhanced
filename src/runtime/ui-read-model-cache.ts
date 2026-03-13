@@ -3,12 +3,12 @@ import { OpenClawReadonlyAdapter } from "../adapters/openclaw-readonly";
 import type { ToolClient } from "../clients/tool-client";
 import { mapSessionsListToSummaries } from "../mappers/openclaw-mappers";
 import { computeBudgetSummary } from "./budget-governance";
-import { loadBudgetPolicy } from "./budget-policy";
+import { loadBudgetPolicy, type BudgetPolicyLoadResult } from "./budget-policy";
 import { loadProjectStore } from "./project-store";
 import { computeProjectSummaries } from "./project-summary";
 import { computeTasksSummary } from "./task-summary";
 import { loadTaskStore } from "./task-store";
-import type { ReadModelSnapshot } from "../types";
+import type { ProjectStoreSnapshot, ReadModelSnapshot, TaskStoreSnapshot } from "../types";
 
 interface SnapshotInFlight {
   sourceStamp: string;
@@ -35,6 +35,10 @@ interface UiReadModelCacheOptions {
     a: ReadModelSnapshot["sessions"][number],
     b: ReadModelSnapshot["sessions"][number],
   ) => number;
+  loadProjectStore?: () => Promise<ProjectStoreSnapshot>;
+  loadTaskStore?: () => Promise<TaskStoreSnapshot>;
+  loadBudgetPolicy?: () => Promise<BudgetPolicyLoadResult>;
+  mapSessionsListToSummaries?: typeof mapSessionsListToSummaries;
 }
 
 export interface UiReadModelCache {
@@ -44,6 +48,11 @@ export interface UiReadModelCache {
 }
 
 export function createUiReadModelCache(options: UiReadModelCacheOptions): UiReadModelCache {
+  const loadProjectStoreImpl = options.loadProjectStore ?? loadProjectStore;
+  const loadTaskStoreImpl = options.loadTaskStore ?? loadTaskStore;
+  const loadBudgetPolicyImpl = options.loadBudgetPolicy ?? loadBudgetPolicy;
+  const mapSessionsListToSummariesImpl =
+    options.mapSessionsListToSummaries ?? mapSessionsListToSummaries;
   let renderSnapshotCache:
     | {
         sourceStamp: string;
@@ -108,7 +117,7 @@ export function createUiReadModelCache(options: UiReadModelCacheOptions): UiRead
 
     try {
       const [snapshot, live] = await Promise.all([snapshotPromise, livePromise]);
-      const sessions = mapSessionsListToSummaries(live);
+      const sessions = mapSessionsListToSummariesImpl(live);
       if (sessions.length === 0) return snapshot;
 
       const liveStatuses: ReadModelSnapshot["statuses"] = [];
@@ -186,9 +195,9 @@ export function createUiReadModelCache(options: UiReadModelCacheOptions): UiRead
 
     const snapshot = await readSnapshotJsonWithRetry();
     const [projects, tasks, budgetPolicy] = await Promise.all([
-      loadProjectStore(),
-      loadTaskStore(),
-      loadBudgetPolicy(),
+      loadProjectStoreImpl(),
+      loadTaskStoreImpl(),
+      loadBudgetPolicyImpl(),
     ]);
 
     if (budgetPolicy.issues.length > 0) {
