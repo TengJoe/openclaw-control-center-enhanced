@@ -55,12 +55,24 @@ export class OpenClawReadonlyAdapter {
   }
 
   async snapshot(): Promise<ReadModelSnapshot> {
-    const sessions = await this.listSessions();
-    const statuses = await this.listSessionStatuses(sessions.map((s) => s.sessionKey));
-    const cronJobs = await this.listCronJobs();
-    const approvals = await this.listApprovals();
-    const [projects, tasks] = await Promise.all([loadProjectStore(), loadTaskStore()]);
-    const budgetPolicy = await loadBudgetPolicy();
+    const sessionsPromise = this.listSessions();
+    const cronJobsPromise = this.listCronJobs();
+    const approvalsPromise = this.listApprovals();
+    const projectsPromise = loadProjectStore();
+    const tasksPromise = loadTaskStore();
+    const budgetPolicyPromise = loadBudgetPolicy();
+
+    const sessions = await sessionsPromise;
+    const statusesPromise = this.listSessionStatuses(sessions.map((s) => s.sessionKey));
+    const [statuses, cronJobs, approvals, projects, tasks, budgetPolicy] = await Promise.all([
+      statusesPromise,
+      cronJobsPromise,
+      approvalsPromise,
+      projectsPromise,
+      tasksPromise,
+      budgetPolicyPromise,
+    ]);
+
     const tasksSummary = computeTasksSummary(tasks, projects.projects.length);
     const projectSummaries = computeProjectSummaries(projects, tasks);
     const budgetSummary = computeBudgetSummary(sessions, statuses, tasks, projects, budgetPolicy.policy);
