@@ -2,6 +2,73 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { OpenClawLiveClient } from "../src/clients/openclaw-live-client";
 
+test("sessionsList prefers local session stores over the slower CLI listing", async () => {
+  let cliCount = 0;
+  const client = new OpenClawLiveClient({
+    loadSessionsFromStores: async () => ({
+      sessions: [
+        {
+          sessionKey: "agent:main:main",
+          key: "agent:main:main",
+          sessionId: "local-1",
+          agentId: "main",
+          updatedAtMs: 1773300000000,
+          sessionFile: "/tmp/local-1.jsonl",
+          state: "running",
+          active: true,
+          model: "gpt-5.4",
+          inputTokens: 1,
+          outputTokens: 2,
+          totalTokens: 3,
+        },
+      ],
+    }),
+    runSessionsListJson: async () => {
+      cliCount += 1;
+      return { sessions: [] };
+    },
+  });
+
+  const result = await client.sessionsList();
+
+  assert.equal(cliCount, 0);
+  assert.equal(result.sessions?.length, 1);
+  assert.equal(result.sessions?.[0]?.sessionKey, "agent:main:main");
+});
+
+test("sessionsList falls back to CLI listing when local stores are empty", async () => {
+  let cliCount = 0;
+  const client = new OpenClawLiveClient({
+    loadSessionsFromStores: async () => ({ sessions: [] }),
+    runSessionsListJson: async () => {
+      cliCount += 1;
+      return {
+        sessions: [
+          {
+            key: "agent:main:main",
+            sessionId: "cli-1",
+            agentId: "main",
+            updatedAt: 1773300000000,
+            sessionFile: "/tmp/cli-1.jsonl",
+            state: "running",
+            active: true,
+            model: "gpt-5.4",
+            inputTokens: 4,
+            outputTokens: 5,
+            totalTokens: 9,
+          },
+        ],
+      };
+    },
+  });
+
+  const result = await client.sessionsList();
+
+  assert.equal(cliCount, 1);
+  assert.equal(result.sessions?.length, 1);
+  assert.equal(result.sessions?.[0]?.sessionId, "cli-1");
+});
+
 test("sessionsHistory returns file-backed history without probing CLI support", async () => {
   let fileReadCount = 0;
   let probeCount = 0;

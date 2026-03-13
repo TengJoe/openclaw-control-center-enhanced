@@ -28,6 +28,8 @@ interface SessionCacheItem {
 }
 
 interface OpenClawLiveClientDeps {
+  loadSessionsFromStores?: () => Promise<SessionsListResponse>;
+  runSessionsListJson?: () => Promise<{ sessions?: Array<Record<string, unknown>> }>;
   readSessionHistoryFile?: (
     sessionFile: string,
     limit: number,
@@ -82,16 +84,27 @@ export class OpenClawLiveClient implements ToolClient {
   constructor(private readonly deps: OpenClawLiveClientDeps = {}) {}
 
   async sessionsList(): Promise<SessionsListResponse> {
+    const loadSessionsFromStore = this.deps.loadSessionsFromStores?.bind(this) ?? this.loadSessionsFromStores.bind(this);
+    let storeSessions: NonNullable<SessionsListResponse["sessions"]> = [];
+    try {
+      storeSessions = (await loadSessionsFromStore()).sessions ?? [];
+      if (storeSessions.length > 0) {
+        return { sessions: storeSessions };
+      }
+    } catch {
+      storeSessions = [];
+    }
+
     const openclawHome = resolveOpenClawHomePath();
     const configuredAgentKeys = await this.loadConfiguredAgentKeys();
     let data: { sessions?: Array<Record<string, unknown>> };
     try {
-      data = await runJson<{ sessions?: Array<Record<string, unknown>> }>([
-        "sessions",
-        "--json",
-      ]);
+      const runSessionsListJson =
+        this.deps.runSessionsListJson ??
+        (() => runJson<{ sessions?: Array<Record<string, unknown>> }>(["sessions", "--json"], { timeoutMs: 4_000 }));
+      data = await runSessionsListJson();
     } catch {
-      return this.loadSessionsFromStores();
+      return { sessions: storeSessions };
     }
 
     const cliSessions: NonNullable<SessionsListResponse["sessions"]> = (data.sessions ?? []).map((item) => ({
@@ -110,13 +123,7 @@ export class OpenClawLiveClient implements ToolClient {
       state: readSessionState(item),
       active: asBoolean(item.active) ?? false,
     })).filter((item) => matchesConfiguredAgents(item.agentId ?? extractAgentIdFromSessionKey(item.sessionKey), configuredAgentKeys));
-    let sessions: NonNullable<SessionsListResponse["sessions"]> = cliSessions;
-    try {
-      const storeSessions = (await this.loadSessionsFromStores()).sessions ?? [];
-      sessions = mergeSessionLists(cliSessions, storeSessions);
-    } catch {
-      sessions = cliSessions;
-    }
+    const sessions: NonNullable<SessionsListResponse["sessions"]> = mergeSessionLists(cliSessions, storeSessions);
 
     this.sessionCache.clear();
     for (const s of sessions) {
