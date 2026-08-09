@@ -5285,33 +5285,38 @@ async function renderHtml(
     .theme-toggle-track {
       display: inline-grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 4px;
-      padding: 4px;
-      width: min(100%, 140px);
+      align-items: center;
+      gap: 6px;
+      padding: 6px;
+      width: min(100%, 132px);
       border-radius: 999px;
       background:
-        linear-gradient(180deg, rgba(13, 18, 28, 0.94), rgba(17, 23, 34, 0.92)),
-        radial-gradient(circle at 20% 12%, rgba(255, 110, 110, 0.12), transparent 42%);
-      border: 1px solid rgba(126, 147, 177, 0.16);
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(240, 244, 248, 0.96)),
+        radial-gradient(circle at 22% 14%, rgba(255, 255, 255, 0.9), transparent 44%);
+      border: 1px solid rgba(17, 24, 39, 0.1);
       box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.04),
-        0 12px 28px rgba(9, 14, 24, 0.22);
+        inset 0 1px 2px rgba(17, 24, 39, 0.08),
+        0 8px 20px rgba(15, 23, 42, 0.1);
     }
     .theme-toggle .segment-item.theme-toggle-button {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 40px;
-      height: 32px;
+      width: 34px;
+      height: 34px;
+      min-height: 34px;
       padding: 0;
-      border: 1px solid rgba(110, 126, 151, 0.14);
-      border-radius: 10px;
-      background: linear-gradient(180deg, rgba(20, 27, 40, 0.92), rgba(15, 20, 31, 0.95));
-      color: rgba(213, 224, 238, 0.68);
+      border: 1px solid rgba(17, 24, 39, 0.12);
+      border-radius: 50%;
+      background:
+        linear-gradient(180deg, #ffffff 0%, #edf1f6 55%, #e2e7ee 100%),
+        radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.95), transparent 46%);
+      color: #5b6672;
       cursor: pointer;
       box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.03),
-        0 1px 1px rgba(8, 12, 18, 0.18);
+        0 2px 3px rgba(17, 24, 39, 0.18),
+        0 6px 12px rgba(15, 23, 42, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.92);
       transition:
         transform 160ms ease,
         border-color 160ms ease,
@@ -5321,26 +5326,83 @@ async function renderHtml(
     }
     .theme-toggle .segment-item.theme-toggle-button:hover {
       transform: translateY(-1px);
-      border-color: rgba(255, 104, 111, 0.34);
-      color: rgba(245, 248, 252, 0.92);
+      border-color: rgba(0, 113, 227, 0.3);
+      color: #1a4e6e;
+      box-shadow:
+        0 3px 5px rgba(17, 24, 39, 0.2),
+        0 10px 18px rgba(15, 23, 42, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    }
+    .theme-toggle .segment-item.theme-toggle-button:active {
+      transform: translateY(1px);
+      background: linear-gradient(180deg, #dde3ea 0%, #e9edf2 100%);
+      box-shadow:
+        inset 0 2px 4px rgba(17, 24, 39, 0.18),
+        0 1px 0 rgba(255, 255, 255, 0.7);
     }
     .theme-toggle .segment-item.theme-toggle-button:focus-visible {
       outline: none;
-      border-color: rgba(255, 104, 111, 0.42);
+      border-color: rgba(0, 113, 227, 0.55);
       box-shadow:
-        0 0 0 3px rgba(255, 104, 111, 0.18),
-        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        0 0 0 3px rgba(0, 113, 227, 0.18),
+        0 2px 4px rgba(17, 24, 39, 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
     }
     .theme-toggle .segment-item.theme-toggle-button.active {
-      border-color: rgba(255, 92, 101, 0.72);
+      border-color: rgba(0, 113, 227, 0.5);
       background:
-        linear-gradient(180deg, rgba(52, 25, 30, 0.96), rgba(38, 18, 23, 0.98)),
-        radial-gradient(circle at 50% 25%, rgba(255, 120, 120, 0.18), transparent 52%);
-      color: #ff737d;
+        linear-gradient(180deg, #d6e6fb 0%, #c3d9f4 60%, #b5cdef 100%),
+        radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.7), transparent 46%);
+      color: #0059b4;
       box-shadow:
-        0 0 0 2px rgba(255, 92, 101, 0.18),
-        0 10px 24px rgba(101, 23, 31, 0.34),
-        inset 0 0 0 1px rgba(255, 139, 146, 0.24);
+        inset 0 2px 4px rgba(15, 52, 96, 0.22),
+        inset 0 -1px 0 rgba(255, 255, 255, 0.6),
+        0 1px 2px rgba(15, 23, 42, 0.12);
+    }
+    body[data-ui-theme-resolved="dark"] .theme-toggle-track {
+      background:
+        linear-gradient(180deg, rgba(24, 34, 48, 0.98), rgba(14, 21, 31, 0.96)),
+        radial-gradient(circle at 22% 14%, rgba(255, 255, 255, 0.05), transparent 44%);
+      border-color: rgba(132, 164, 201, 0.18);
+      box-shadow:
+        inset 0 1px 2px rgba(0, 0, 0, 0.5),
+        0 10px 24px rgba(2, 8, 14, 0.4);
+    }
+    body[data-ui-theme-resolved="dark"] .theme-toggle .segment-item.theme-toggle-button {
+      border-color: rgba(132, 164, 201, 0.2);
+      background:
+        linear-gradient(180deg, #33445c 0%, #263649 55%, #1d2b3c 100%),
+        radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.08), transparent 46%);
+      color: rgba(213, 224, 238, 0.66);
+      box-shadow:
+        0 2px 3px rgba(0, 0, 0, 0.45),
+        0 6px 12px rgba(2, 8, 14, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+    body[data-ui-theme-resolved="dark"] .theme-toggle .segment-item.theme-toggle-button:hover {
+      transform: translateY(-1px);
+      border-color: rgba(142, 190, 242, 0.42);
+      color: #e6f0fb;
+      box-shadow:
+        0 3px 6px rgba(0, 0, 0, 0.5),
+        0 12px 20px rgba(2, 8, 14, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    }
+    body[data-ui-theme-resolved="dark"] .theme-toggle .segment-item.theme-toggle-button:active {
+      transform: translateY(1px);
+      background: linear-gradient(180deg, #1b2838 0%, #223247 100%);
+      box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.6), 0 1px 0 rgba(255, 255, 255, 0.06);
+    }
+    body[data-ui-theme-resolved="dark"] .theme-toggle .segment-item.theme-toggle-button.active {
+      border-color: rgba(142, 190, 242, 0.55);
+      background:
+        linear-gradient(180deg, #2c4a6e 0%, #213a58 60%, #1b3049 100%),
+        radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.12), transparent 46%);
+      color: #a8d1ff;
+      box-shadow:
+        inset 0 2px 5px rgba(0, 0, 0, 0.45),
+        inset 0 -1px 0 rgba(255, 255, 255, 0.12),
+        0 1px 2px rgba(0, 0, 0, 0.4);
     }
     .theme-toggle-icon {
       display: inline-flex;
@@ -5350,8 +5412,8 @@ async function renderHtml(
       height: 18px;
     }
     .theme-toggle-icon svg {
-      width: 23px;
-      height: 23px;
+      width: 20px;
+      height: 20px;
       fill: none;
       stroke: currentColor;
       stroke-width: 1.85;

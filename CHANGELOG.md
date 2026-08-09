@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added badge styles for `running`, `waiting_approval` and `error` session states (light and dark).
 
 ### Changed
-- Theme switcher compacted from oversized 54px buttons to a tight 40px segmented control so it no longer crowds the sidebar brand card.
+- Theme switcher redesigned as a compact circular skeuomorphic control (34px round buttons with raised/pressed shading) that follows the active theme: light track + light buttons in light mode, dark track + dark buttons in dark mode, and no longer crowds the sidebar brand card.
 
 ### Changed
 - Mobile polish: new `@media (max-width: 720px)` breakpoint with tighter shell/panel padding, smaller section titles, compact nav rows and touch-friendly spacing.
@@ -41,5 +41,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Kept `src/ui/server.ts` as a thinner route-and-render shell after extracting shared runtime logic.
+
 
 
