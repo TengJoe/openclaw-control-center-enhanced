@@ -15,7 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Dark theme: collapsible card headers (`details summary`) kept a dark-navy color that was hard to read on dark panels; they now use the light dark-theme text color.
+- Dark theme: interactive hover states (nav links, buttons, segment toggles, action cards, table rows) no longer flip to light backgrounds with light text — they now keep dark surfaces so labels stay readable.
 - Added badge styles for `running`, `waiting_approval` and `error` session states (light and dark).
+
+### Changed
+- Theme switcher compacted from oversized 54px buttons to a tight 40px segmented control so it no longer crowds the sidebar brand card.
 
 ### Changed
 - Mobile polish: new `@media (max-width: 720px)` breakpoint with tighter shell/panel padding, smaller section titles, compact nav rows and touch-friendly spacing.
@@ -37,4 +41,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Kept `src/ui/server.ts` as a thinner route-and-render shell after extracting shared runtime logic.
+
 

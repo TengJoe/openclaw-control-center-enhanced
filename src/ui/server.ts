@@ -5273,9 +5273,9 @@ async function renderHtml(
       box-shadow: 0 10px 24px rgba(0, 113, 227, 0.08);
     }
     .theme-toggle {
-      margin-top: 10px;
+      margin-top: 8px;
       display: grid;
-      gap: 8px;
+      gap: 6px;
       align-items: start;
     }
     .theme-toggle-label {
@@ -5285,9 +5285,9 @@ async function renderHtml(
     .theme-toggle-track {
       display: inline-grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 6px;
-      padding: 6px;
-      width: min(100%, 186px);
+      gap: 4px;
+      padding: 4px;
+      width: min(100%, 140px);
       border-radius: 999px;
       background:
         linear-gradient(180deg, rgba(13, 18, 28, 0.94), rgba(17, 23, 34, 0.92)),
@@ -5301,11 +5301,11 @@ async function renderHtml(
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 54px;
-      height: 54px;
+      width: 40px;
+      height: 32px;
       padding: 0;
       border: 1px solid rgba(110, 126, 151, 0.14);
-      border-radius: 18px;
+      border-radius: 10px;
       background: linear-gradient(180deg, rgba(20, 27, 40, 0.92), rgba(15, 20, 31, 0.95));
       color: rgba(213, 224, 238, 0.68);
       cursor: pointer;
@@ -5346,8 +5346,8 @@ async function renderHtml(
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 26px;
-      height: 26px;
+      width: 18px;
+      height: 18px;
     }
     .theme-toggle-icon svg {
       width: 23px;
@@ -7629,6 +7629,32 @@ async function renderHtml(
       .panel-toggle { white-space: nowrap; }
       .global-visibility-card { -webkit-overflow-scrolling: touch; }
     }
+    body[data-ui-theme-resolved="dark"] .nav-link:hover,
+    body[data-ui-theme-resolved="dark"] .quick-chip:hover,
+    body[data-ui-theme-resolved="dark"] .file-nav-item:hover {
+      background: linear-gradient(180deg, rgba(31, 45, 63, 0.92), rgba(24, 36, 52, 0.94));
+      border-color: rgba(132, 164, 201, 0.22);
+      box-shadow: 0 14px 30px rgba(2, 8, 14, 0.3);
+    }
+    body[data-ui-theme-resolved="dark"] .panel-toggle:hover,
+    body[data-ui-theme-resolved="dark"] .btn:hover {
+      background: linear-gradient(180deg, rgba(31, 45, 63, 0.96), rgba(24, 36, 52, 0.96));
+      border-color: rgba(132, 164, 201, 0.26);
+      color: #a9c7e6;
+      box-shadow: 0 12px 26px rgba(2, 8, 14, 0.3);
+    }
+    body[data-ui-theme-resolved="dark"] .segment-item:hover {
+      background: rgba(40, 56, 76, 0.92);
+      color: #eef5fb;
+    }
+    body[data-ui-theme-resolved="dark"] .overview-action-item:hover,
+    body[data-ui-theme-resolved="dark"] .decision-row:hover,
+    body[data-ui-theme-resolved="dark"] .file-facet-switch .segment-item:hover {
+      background: linear-gradient(180deg, rgba(31, 45, 63, 0.9), rgba(24, 36, 52, 0.92));
+      border-color: rgba(132, 164, 201, 0.2);
+      box-shadow: inset 0 1px 0 rgba(132, 164, 201, 0.1), 0 12px 26px rgba(2, 8, 14, 0.28);
+    }
+    body[data-ui-theme-resolved="dark"] tr:hover td { background: rgba(40, 56, 76, 0.5); }
     @media (prefers-reduced-motion: reduce) {
       * {
         animation-duration: 0.01ms !important;
