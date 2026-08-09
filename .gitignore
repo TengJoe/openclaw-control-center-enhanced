@@ -35,3 +35,8 @@ docs/assets/_usage-*.png
 720m
 alexfinn-gap-checklist.md
 i18n-missing-list.md
+
+# Keep the GitHub Actions workflow tracked even though generic workflows/ dirs are ignored.
+!.github/
+!.github/workflows/
+!.github/workflows/ci.yml
