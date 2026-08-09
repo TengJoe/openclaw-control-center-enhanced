@@ -10,6 +10,7 @@ const gzip = promisify(gzipCb);
 import {
   APPROVAL_ACTIONS_DRY_RUN,
   APPROVAL_ACTIONS_ENABLED,
+  GATEWAY_URL,
   IMPORT_MUTATION_DRY_RUN,
   IMPORT_MUTATION_ENABLED,
   LOCAL_API_TOKEN,
@@ -113,6 +114,7 @@ import type {
   ReadinessCategoryScore,
   ProjectState,
   ReadModelSnapshot,
+  SessionStatusSnapshot,
   TaskListItem,
   TaskState,
 } from "../types";
@@ -198,6 +200,7 @@ const DASHBOARD_SECTIONS = [
   "overview",
   "calendar",
   "team",
+  "sessions",
   "memory",
   "docs",
   "usage-cost",
@@ -231,6 +234,7 @@ const DASHBOARD_SECTION_LINKS_EN: DashboardSectionLink[] = [
   { key: "overview", label: "Overview", blurb: "Today at a glance" },
   { key: "usage-cost", label: "Usage", blurb: "Budget and quota" },
   { key: "team", label: "Staff", blurb: "Mission, staff and assignments" },
+  { key: "sessions", label: "Sessions", blurb: "Live sessions, models and state" },
   { key: "memory", label: "Memory", blurb: "Daily and long-term memories" },
   { key: "docs", label: "Documents", blurb: "Main and active agent core docs" },
   { key: "projects-tasks", label: "Tasks", blurb: "Board, schedule and activity" },
@@ -2028,6 +2032,9 @@ function dashboardSectionLinks(language: UiLanguage): DashboardSectionLink[] {
     if (item.key === "team") {
       return { ...item, label: "员工", blurb: "员工、分工与职责" };
     }
+    if (item.key === "sessions") {
+      return { ...item, label: "会话", blurb: "实时会话、模型与状态" };
+    }
     if (item.key === "memory") {
       return { ...item, label: "记忆", blurb: "每日与长期记忆" };
     }
@@ -3221,6 +3228,11 @@ async function renderHtml(
           "Decide from one screen: system health, items needing your intervention, who is active, and AI burn.",
           "一个首页只回答四件事：系统是否正常、哪里需要你介入、谁在忙、AI 用量是否异常。",
         )
+      : activeSection === "sessions"
+        ? t(
+            "Live view of OpenClaw sessions: who is running, blocked, waiting for approval, and on which model.",
+            "实时会话：谁在运行、谁卡住、谁在等审批，以及各自使用的模型。",
+          )
       : activeSection === "projects-tasks"
         ? t(
             "Start with schedule and cron execution. Staff can be active from cron or ad-hoc sessions even when there is no tracked task row yet.",
@@ -4968,6 +4980,7 @@ async function renderHtml(
       </div>
     </section>
   `;
+  const sessionsSection = options.section === "sessions" ? renderSessionsSection(snapshot, options.language) : "";
   let sectionBody = overviewSection;
   if (options.section === "calendar") sectionBody = projectsSection;
   if (options.section === "team") sectionBody = teamUnifiedSection;
@@ -4976,6 +4989,7 @@ async function renderHtml(
   if (options.section === "usage-cost") sectionBody = usageSection;
   if (options.section === "office-space") sectionBody = teamUnifiedSection;
   if (options.section === "projects-tasks") sectionBody = projectsSection;
+  if (options.section === "sessions") sectionBody = sessionsSection;
   if (options.section === "alerts") sectionBody = alertsSection;
   if (options.section === "replay-audit") sectionBody = replaySection;
   if (options.section === "settings") sectionBody = settingsSection;
@@ -5005,6 +5019,7 @@ async function renderHtml(
   ]
     .map((item) => `<div class="meta"><a href="${escapeHtml(item.href)}">${escapeHtml(item.label)}</a>：${item.count}</div>`)
     .join("");
+  const gatewayHealth = resolveGatewayHealth(snapshot.generatedAt, options.language);
   const sidebarSignalRows =
     options.section === "overview"
       ? globalVisibilityQuickRows
@@ -7593,6 +7608,27 @@ async function renderHtml(
       .file-editor-panel { grid-template-rows: auto minmax(280px, 1fr) auto; }
       .file-editor-textarea { min-height: 360px; }
     }
+    .badge.running { color: #0059b4; border-color: rgba(0, 113, 227, 0.32); background: rgba(236, 246, 255, 0.95); }
+    .badge.waiting_approval { color: #94680e; border-color: rgba(181, 127, 16, 0.32); background: rgba(255, 248, 232, 0.95); }
+    .badge.error { color: #b53125; border-color: rgba(210, 63, 49, 0.34); background: rgba(255, 240, 238, 0.95); }
+    .inspector-sidebar code { word-break: break-all; }
+    .global-visibility-card::-webkit-scrollbar { height: 8px; }
+    .global-visibility-card::-webkit-scrollbar-track { background: transparent; }
+    .global-visibility-card::-webkit-scrollbar-thumb { background: rgba(17, 24, 39, 0.16); border-radius: 999px; }
+    body[data-ui-theme-resolved="dark"] .global-visibility-card::-webkit-scrollbar-thumb { background: rgba(132, 164, 201, 0.22); }
+    @media (max-width: 720px) {
+      .app-shell { padding: 10px; gap: 10px; }
+      .sidebar, .panel { border-radius: 18px; }
+      .sidebar { padding: 14px; }
+      .panel { padding: 16px; }
+      .section-title { font-size: 22px; }
+      .brand { padding: 13px; }
+      .nav-links { gap: 6px; }
+      .nav-link { padding: 10px 12px; }
+      .section-hero-head { gap: 10px; }
+      .panel-toggle { white-space: nowrap; }
+      .global-visibility-card { -webkit-overflow-scrolling: touch; }
+    }
     @media (prefers-reduced-motion: reduce) {
       * {
         animation-duration: 0.01ms !important;
@@ -7632,6 +7668,7 @@ async function renderHtml(
       background: rgba(42, 59, 78, 0.92) !important;
       border-color: rgba(132, 164, 201, 0.18) !important;
     }
+    body[data-ui-theme-resolved="dark"] details summary,
     body[data-ui-theme-resolved="dark"] .exec-title,
     body[data-ui-theme-resolved="dark"] .exec-metric,
     body[data-ui-theme-resolved="dark"] .signal-gauge-head span,
@@ -7937,6 +7974,13 @@ async function renderHtml(
     </main>
     <aside class="sidebar inspector-sidebar">
       <div class="card">
+        <h2>${escapeHtml(t("OpenClaw Gateway", "OpenClaw 网关"))}</h2>
+        <div class="meta">${escapeHtml(t("Endpoint", "地址"))}：<code>${escapeHtml(GATEWAY_URL)}</code></div>
+        <div class="meta">${badge(gatewayHealth.status, gatewayHealth.label)} · ${escapeHtml(t("Snapshot age", "快照延迟"))}：${escapeHtml(gatewayHealth.ageLabel)}</div>
+        <div class="meta">${escapeHtml(t("Read-only mode", "只读模式"))}：${escapeHtml(READONLY_MODE ? t("On", "开启") : t("Off", "关闭"))} · ${escapeHtml(t("Live sessions", "活跃会话"))}：${liveSessionCount}</div>
+        ${gatewayHealth.hint}
+      </div>
+      <div class="card" style="margin-top:10px;">
         <h2>${escapeHtml(t("Current status", "当前状态"))}</h2>
         <div class="meta">${escapeHtml(t("Active sessions", "活跃会话"))}：${liveSessionCount}</div>
         <div class="meta">${escapeHtml(t("Tasks under watch", "正在观察中的任务"))}：${taskCertaintyCards.length}</div>
@@ -7982,6 +8026,94 @@ async function renderHtml(
   ${quotaResetScript}
 </body>
 </html>`;
+}
+
+function formatAgeLabel(ageMs: number, language: UiLanguage): string {
+  const totalSeconds = Math.max(0, Math.floor(ageMs / 1000));
+  if (totalSeconds < 60) return pickUiText(language, `${totalSeconds}s ago`, `${totalSeconds} 秒前`);
+  const totalMinutes = Math.floor(totalSeconds / 60);
+  if (totalMinutes < 60) return pickUiText(language, `${totalMinutes}m ago`, `${totalMinutes} 分钟前`);
+  const totalHours = Math.floor(totalMinutes / 60);
+  if (totalHours < 24) return pickUiText(language, `${totalHours}h ago`, `${totalHours} 小时前`);
+  return pickUiText(language, `${Math.floor(totalHours / 24)}d ago`, `${Math.floor(totalHours / 24)} 天前`);
+}
+
+function resolveGatewayHealth(generatedAt: string, language: UiLanguage, nowMs: number = Date.now()) {
+  const parsed = Date.parse(generatedAt);
+  const ageMs = Number.isNaN(parsed) ? Number.MAX_SAFE_INTEGER : Math.max(0, nowMs - parsed);
+  const status = ageMs > 5 * 60_000 ? "stale" : ageMs > 60_000 ? "warn" : "ok";
+  const label =
+    status === "stale"
+      ? pickUiText(language, "Data source is stale", "数据源已过期")
+      : status === "warn"
+        ? pickUiText(language, "Data source is slow", "数据源延迟较高")
+        : pickUiText(language, "Connected", "连接正常");
+  const hint =
+    status === "stale"
+      ? `<div class="meta" style="color: var(--warn);">${escapeHtml(pickUiText(language, "OpenClaw Gateway is not responding. Start the Gateway, and if this is a new device, complete pairing first.", "OpenClaw 网关未响应。请先启动 Gateway；若为新设备，请先完成配对。"))}</div>`
+      : "";
+  return { status, label, ageLabel: formatAgeLabel(ageMs, language), hint };
+}
+
+function sessionStateLabelLocal(state: AgentRunState, language: UiLanguage): string {
+  if (state === "running") return pickUiText(language, "Running", "执行中");
+  if (state === "waiting_approval") return pickUiText(language, "Waiting approval", "待审批");
+  if (state === "blocked") return pickUiText(language, "Blocked", "阻塞");
+  if (state === "error") return pickUiText(language, "Error", "异常");
+  return pickUiText(language, "Idle", "待命");
+}
+
+function renderSessionsSection(snapshot: ReadModelSnapshot, language: UiLanguage): string {
+  const statusBySession = new Map<string, SessionStatusSnapshot>();
+  for (const status of snapshot.statuses ?? []) {
+    if (!statusBySession.has(status.sessionKey)) statusBySession.set(status.sessionKey, status);
+  }
+  const stateRank: Record<AgentRunState, number> = {
+    running: 0,
+    waiting_approval: 1,
+    blocked: 2,
+    error: 3,
+    idle: 4,
+  };
+  const sessions = [...(snapshot.sessions ?? [])].sort((a, b) => {
+    const rankDiff = (stateRank[a.state] ?? 5) - (stateRank[b.state] ?? 5);
+    if (rankDiff !== 0) return rankDiff;
+    const at = Date.parse(a.lastMessageAt ?? "");
+    const bt = Date.parse(b.lastMessageAt ?? "");
+    return (Number.isNaN(bt) ? 0 : bt) - (Number.isNaN(at) ? 0 : at);
+  });
+  const rows =
+    sessions.length === 0
+      ? `<div class="group-item"><div class="meta">${escapeHtml(pickUiText(language, "No session signals yet. Open the Gateway and start an OpenClaw session to see it here.", "暂无会话信号。启动 Gateway 并打开一个 OpenClaw 会话后，会显示在这里。"))}</div></div>`
+      : sessions
+          .map((session) => {
+            const status = statusBySession.get(session.sessionKey);
+            const model = status?.model ? escapeHtml(status.model) : pickUiText(language, "Unknown model", "未知模型");
+            const tokens =
+              status && (status.tokensIn !== undefined || status.tokensOut !== undefined)
+                ? `${formatInt(status.tokensIn ?? 0)} → ${formatInt(status.tokensOut ?? 0)}`
+                : pickUiText(language, "No token signal", "暂无 token 信号");
+            const lastActivity = session.lastMessageAt
+              ? formatAgeLabel(Math.max(0, Date.now() - Date.parse(session.lastMessageAt)), language)
+              : pickUiText(language, "No activity", "暂无活动");
+            const label = session.label?.trim() ? escapeHtml(session.label) : `<code>${escapeHtml(session.sessionKey)}</code>`;
+            const agent = session.agentId?.trim() ? escapeHtml(session.agentId) : pickUiText(language, "Unassigned", "未分配");
+            return `<div class="group-item">
+              <div class="group-item-head"><strong>${label}</strong>${badge(session.state, escapeHtml(sessionStateLabelLocal(session.state, language)))}</div>
+              <div class="meta">${escapeHtml(pickUiText(language, "Agent", "智能体"))}：${agent} · ${escapeHtml(pickUiText(language, "Model", "模型"))}：${model}</div>
+              <div class="meta">${escapeHtml(pickUiText(language, "Tokens in → out", "输入 → 输出"))}：${escapeHtml(tokens)} · ${escapeHtml(pickUiText(language, "Last activity", "最近活动"))}：${escapeHtml(lastActivity)}</div>
+            </div>`;
+          })
+          .join("");
+  return `<section class="card">
+    <h2>${escapeHtml(pickUiText(language, "Sessions", "会话"))}</h2>
+    <div class="meta">${escapeHtml(pickUiText(language, "Live sessions, model, state and token activity from the OpenClaw Gateway.", "来自 OpenClaw 网关的实时会话：状态、模型与 token 活动。"))}</div>
+    <div class="group-section">${rows}</div>
+  </section>`;
+}
+
+export function renderSessionsSectionForSmoke(snapshot: ReadModelSnapshot, language: UiLanguage = "en"): string {
+  return renderSessionsSection(snapshot, language);
 }
 
 function parseTaskFilters(searchParams: URLSearchParams, strict: boolean): TaskQueryFilters {

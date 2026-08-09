@@ -8,8 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- New **Sessions** dashboard section (nav: 会话 / Sessions) with live session cards: state badge (running / waiting approval / blocked / error / idle), agent, model, token in→out, and last activity, plus an actionable empty state.
+- **OpenClaw Gateway** status card in the inspector sidebar showing endpoint, connection health, snapshot age, read-only mode and live session count, with a pairing/start-Gateway hint when the data source is stale (aligned with OpenClaw's actionable connection messaging).
 - GitHub Actions CI workflow (`.github/workflows/ci.yml`) that installs dependencies, runs the test suite, and builds the project on Node 22 for every push and pull request.
 - `CHANGELOG.md` to track notable changes across releases.
+
+### Fixed
+- Dark theme: collapsible card headers (`details summary`) kept a dark-navy color that was hard to read on dark panels; they now use the light dark-theme text color.
+- Added badge styles for `running`, `waiting_approval` and `error` session states (light and dark).
+
+### Changed
+- Mobile polish: new `@media (max-width: 720px)` breakpoint with tighter shell/panel padding, smaller section titles, compact nav rows and touch-friendly spacing.
+- Thin scrollbars for horizontally scrollable tables on the global visibility card.
 
 ## [0.1.0] - 2026-03-14
 
@@ -27,3 +37,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Kept `src/ui/server.ts` as a thinner route-and-render shell after extracting shared runtime logic.
+
