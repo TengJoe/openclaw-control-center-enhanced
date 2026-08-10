@@ -10,6 +10,7 @@ const gzip = promisify(gzipCb);
 import {
   APPROVAL_ACTIONS_DRY_RUN,
   APPROVAL_ACTIONS_ENABLED,
+  GATEWAY_URL,
   IMPORT_MUTATION_DRY_RUN,
   IMPORT_MUTATION_ENABLED,
   LOCAL_API_TOKEN,
@@ -113,11 +114,13 @@ import type {
   ReadinessCategoryScore,
   ProjectState,
   ReadModelSnapshot,
+  SessionStatusSnapshot,
   TaskListItem,
   TaskState,
 } from "../types";
 
 const SNAPSHOT_PATH = join(process.cwd(), "runtime", "last-snapshot.json");
+const DEMO_MODE = process.env.DEMO_MODE === "true";
 const OPENCLAW_HOME_DIR = process.env.OPENCLAW_HOME?.trim() || join(homedir(), ".openclaw");
 const OPENCLAW_CRON_JOBS_CANDIDATES = [
   join(OPENCLAW_HOME_DIR, "cron", "jobs.json"),
@@ -198,6 +201,7 @@ const DASHBOARD_SECTIONS = [
   "overview",
   "calendar",
   "team",
+  "sessions",
   "memory",
   "docs",
   "usage-cost",
@@ -231,6 +235,7 @@ const DASHBOARD_SECTION_LINKS_EN: DashboardSectionLink[] = [
   { key: "overview", label: "Overview", blurb: "Today at a glance" },
   { key: "usage-cost", label: "Usage", blurb: "Budget and quota" },
   { key: "team", label: "Staff", blurb: "Mission, staff and assignments" },
+  { key: "sessions", label: "Sessions", blurb: "Live sessions, models and state" },
   { key: "memory", label: "Memory", blurb: "Daily and long-term memories" },
   { key: "docs", label: "Documents", blurb: "Main and active agent core docs" },
   { key: "projects-tasks", label: "Tasks", blurb: "Board, schedule and activity" },
@@ -2028,6 +2033,9 @@ function dashboardSectionLinks(language: UiLanguage): DashboardSectionLink[] {
     if (item.key === "team") {
       return { ...item, label: "员工", blurb: "员工、分工与职责" };
     }
+    if (item.key === "sessions") {
+      return { ...item, label: "会话", blurb: "实时会话、模型与状态" };
+    }
     if (item.key === "memory") {
       return { ...item, label: "记忆", blurb: "每日与长期记忆" };
     }
@@ -3221,6 +3229,11 @@ async function renderHtml(
           "Decide from one screen: system health, items needing your intervention, who is active, and AI burn.",
           "一个首页只回答四件事：系统是否正常、哪里需要你介入、谁在忙、AI 用量是否异常。",
         )
+      : activeSection === "sessions"
+        ? t(
+            "Live view of OpenClaw sessions: who is running, blocked, waiting for approval, and on which model.",
+            "实时会话：谁在运行、谁卡住、谁在等审批，以及各自使用的模型。",
+          )
       : activeSection === "projects-tasks"
         ? t(
             "Start with schedule and cron execution. Staff can be active from cron or ad-hoc sessions even when there is no tracked task row yet.",
@@ -4968,6 +4981,7 @@ async function renderHtml(
       </div>
     </section>
   `;
+  const sessionsSection = options.section === "sessions" ? renderSessionsSection(snapshot, options.language) : "";
   let sectionBody = overviewSection;
   if (options.section === "calendar") sectionBody = projectsSection;
   if (options.section === "team") sectionBody = teamUnifiedSection;
@@ -4976,6 +4990,7 @@ async function renderHtml(
   if (options.section === "usage-cost") sectionBody = usageSection;
   if (options.section === "office-space") sectionBody = teamUnifiedSection;
   if (options.section === "projects-tasks") sectionBody = projectsSection;
+  if (options.section === "sessions") sectionBody = sessionsSection;
   if (options.section === "alerts") sectionBody = alertsSection;
   if (options.section === "replay-audit") sectionBody = replaySection;
   if (options.section === "settings") sectionBody = settingsSection;
@@ -5005,6 +5020,7 @@ async function renderHtml(
   ]
     .map((item) => `<div class="meta"><a href="${escapeHtml(item.href)}">${escapeHtml(item.label)}</a>：${item.count}</div>`)
     .join("");
+  const gatewayHealth = resolveGatewayHealth(snapshot.generatedAt, options.language);
   const sidebarSignalRows =
     options.section === "overview"
       ? globalVisibilityQuickRows
@@ -5031,7 +5047,9 @@ async function renderHtml(
   <title>OpenClaw Control Center</title>
   <style>
     :root {
-      --bg: #eef2f6;
+            --edge-inset: rgba(255, 255, 255, 0.9);
+      --edge-line: rgba(255, 255, 255, 0.84);
+--bg: #eef2f6;
       --panel: #ffffff;
       --panel-soft: #fbfbfd;
       --surface-1: rgba(255, 255, 255, 0.98);
@@ -5100,6 +5118,21 @@ async function renderHtml(
     }
     .ui-preload .app-shell { opacity: 1; transform: translateY(0); }
     body.ui-ready .app-shell { opacity: 1; transform: translateY(0); transition: opacity 260ms ease, transform 320ms ease; }
+    .demo-banner {
+      margin: 0 0 14px;
+      padding: 8px 14px;
+      border-radius: 14px;
+      font-size: 12.5px;
+      font-weight: 600;
+      background: linear-gradient(90deg, #fff4d6, #ffe9b8);
+      color: #7a5a12;
+      border: 1px solid #f0d48a;
+    }
+    body[data-ui-theme-resolved="dark"] .demo-banner {
+      background: linear-gradient(90deg, #332c12, #2b2510);
+      color: #f0d48a;
+      border-color: #55461a;
+    }
     body.page-leave .app-shell { opacity: 0; transform: translateY(10px) scale(0.996); transition: opacity 140ms ease, transform 150ms ease; }
     body::before {
       content: "";
@@ -5147,7 +5180,7 @@ async function renderHtml(
       display: none;
     }
     .sidebar {
-      border: 1px solid rgba(255, 255, 255, 0.84);
+      border: 1px solid var(--edge-line);
       background:
         linear-gradient(180deg, var(--glass-1), var(--glass-2)),
         radial-gradient(circle at 100% 0%, rgba(214, 228, 255, 0.2), transparent 48%);
@@ -5167,7 +5200,7 @@ async function renderHtml(
       background:
         linear-gradient(135deg, rgba(232, 239, 255, 0.66), rgba(255, 255, 255, 0.92)),
         radial-gradient(circle at 82% 14%, rgba(255, 255, 255, 0.8), transparent 56%);
-      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.72);
+      box-shadow: inset 0 0 0 1px var(--edge-inset);
     }
     .brand-kicker {
       display: inline-flex;
@@ -5196,7 +5229,7 @@ async function renderHtml(
       color: var(--text);
       background: linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(251, 253, 255, 0.78));
       padding: 12px 13px;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76);
+      box-shadow: inset 0 1px 0 var(--edge-inset);
       transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background 180ms ease;
     }
     .nav-link:hover {
@@ -5213,7 +5246,7 @@ async function renderHtml(
         linear-gradient(180deg, rgba(234, 244, 255, 0.92), rgba(249, 252, 255, 0.98)),
         radial-gradient(circle at 0% 0%, rgba(0, 113, 227, 0.08), transparent 38%);
       box-shadow:
-        inset 0 0 0 1px rgba(255, 255, 255, 0.82),
+        inset 0 0 0 1px var(--edge-inset),
         0 10px 24px rgba(0, 113, 227, 0.08);
     }
     .panel {
@@ -5247,7 +5280,7 @@ async function renderHtml(
       font-size: var(--font-caption);
       font-weight: 620;
       cursor: pointer;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86);
+      box-shadow: inset 0 1px 0 var(--edge-inset);
       transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease, color 180ms ease, background 180ms ease;
     }
     .panel-toggle:hover {
@@ -5258,9 +5291,9 @@ async function renderHtml(
       box-shadow: 0 10px 24px rgba(0, 113, 227, 0.08);
     }
     .theme-toggle {
-      margin-top: 10px;
+      margin-top: 8px;
       display: grid;
-      gap: 8px;
+      gap: 6px;
       align-items: start;
     }
     .theme-toggle-label {
@@ -5270,33 +5303,38 @@ async function renderHtml(
     .theme-toggle-track {
       display: inline-grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
+      align-items: center;
       gap: 6px;
       padding: 6px;
-      width: min(100%, 186px);
+      width: min(100%, 132px);
       border-radius: 999px;
       background:
-        linear-gradient(180deg, rgba(13, 18, 28, 0.94), rgba(17, 23, 34, 0.92)),
-        radial-gradient(circle at 20% 12%, rgba(255, 110, 110, 0.12), transparent 42%);
-      border: 1px solid rgba(126, 147, 177, 0.16);
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(240, 244, 248, 0.96)),
+        radial-gradient(circle at 22% 14%, rgba(255, 255, 255, 0.9), transparent 44%);
+      border: 1px solid rgba(17, 24, 39, 0.1);
       box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.04),
-        0 12px 28px rgba(9, 14, 24, 0.22);
+        inset 0 1px 2px rgba(17, 24, 39, 0.08),
+        0 8px 20px rgba(15, 23, 42, 0.1);
     }
     .theme-toggle .segment-item.theme-toggle-button {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 54px;
-      height: 54px;
+      width: 34px;
+      height: 34px;
+      min-height: 34px;
       padding: 0;
-      border: 1px solid rgba(110, 126, 151, 0.14);
-      border-radius: 18px;
-      background: linear-gradient(180deg, rgba(20, 27, 40, 0.92), rgba(15, 20, 31, 0.95));
-      color: rgba(213, 224, 238, 0.68);
+      border: 1px solid rgba(17, 24, 39, 0.12);
+      border-radius: 50%;
+      background:
+        linear-gradient(180deg, #ffffff 0%, #edf1f6 55%, #e2e7ee 100%),
+        radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.95), transparent 46%);
+      color: #5b6672;
       cursor: pointer;
       box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.03),
-        0 1px 1px rgba(8, 12, 18, 0.18);
+        0 2px 3px rgba(17, 24, 39, 0.18),
+        0 6px 12px rgba(15, 23, 42, 0.08),
+        inset 0 1px 0 var(--edge-inset);
       transition:
         transform 160ms ease,
         border-color 160ms ease,
@@ -5306,37 +5344,94 @@ async function renderHtml(
     }
     .theme-toggle .segment-item.theme-toggle-button:hover {
       transform: translateY(-1px);
-      border-color: rgba(255, 104, 111, 0.34);
-      color: rgba(245, 248, 252, 0.92);
+      border-color: rgba(0, 113, 227, 0.3);
+      color: #1a4e6e;
+      box-shadow:
+        0 3px 5px rgba(17, 24, 39, 0.2),
+        0 10px 18px rgba(15, 23, 42, 0.12),
+        inset 0 1px 0 var(--edge-inset);
+    }
+    .theme-toggle .segment-item.theme-toggle-button:active {
+      transform: translateY(1px);
+      background: linear-gradient(180deg, #dde3ea 0%, #e9edf2 100%);
+      box-shadow:
+        inset 0 2px 4px rgba(17, 24, 39, 0.18),
+        0 1px 0 rgba(255, 255, 255, 0.7);
     }
     .theme-toggle .segment-item.theme-toggle-button:focus-visible {
       outline: none;
-      border-color: rgba(255, 104, 111, 0.42);
+      border-color: rgba(0, 113, 227, 0.55);
       box-shadow:
-        0 0 0 3px rgba(255, 104, 111, 0.18),
-        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        0 0 0 3px rgba(0, 113, 227, 0.18),
+        0 2px 4px rgba(17, 24, 39, 0.18),
+        inset 0 1px 0 var(--edge-inset);
     }
     .theme-toggle .segment-item.theme-toggle-button.active {
-      border-color: rgba(255, 92, 101, 0.72);
+      border-color: rgba(0, 113, 227, 0.5);
       background:
-        linear-gradient(180deg, rgba(52, 25, 30, 0.96), rgba(38, 18, 23, 0.98)),
-        radial-gradient(circle at 50% 25%, rgba(255, 120, 120, 0.18), transparent 52%);
-      color: #ff737d;
+        linear-gradient(180deg, #d6e6fb 0%, #c3d9f4 60%, #b5cdef 100%),
+        radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.7), transparent 46%);
+      color: #0059b4;
       box-shadow:
-        0 0 0 2px rgba(255, 92, 101, 0.18),
-        0 10px 24px rgba(101, 23, 31, 0.34),
-        inset 0 0 0 1px rgba(255, 139, 146, 0.24);
+        inset 0 2px 4px rgba(15, 52, 96, 0.22),
+        inset 0 -1px 0 var(--edge-inset),
+        0 1px 2px rgba(15, 23, 42, 0.12);
+    }
+    body[data-ui-theme-resolved="dark"] .theme-toggle-track {
+      background:
+        linear-gradient(180deg, rgba(24, 34, 48, 0.98), rgba(14, 21, 31, 0.96)),
+        radial-gradient(circle at 22% 14%, rgba(255, 255, 255, 0.05), transparent 44%);
+      border-color: rgba(132, 164, 201, 0.18);
+      box-shadow:
+        inset 0 1px 2px rgba(0, 0, 0, 0.5),
+        0 10px 24px rgba(2, 8, 14, 0.4);
+    }
+    body[data-ui-theme-resolved="dark"] .theme-toggle .segment-item.theme-toggle-button {
+      border-color: rgba(132, 164, 201, 0.2);
+      background:
+        linear-gradient(180deg, #33445c 0%, #263649 55%, #1d2b3c 100%),
+        radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.08), transparent 46%);
+      color: rgba(213, 224, 238, 0.66);
+      box-shadow:
+        0 2px 3px rgba(0, 0, 0, 0.45),
+        0 6px 12px rgba(2, 8, 14, 0.3),
+        inset 0 1px 0 var(--edge-inset);
+    }
+    body[data-ui-theme-resolved="dark"] .theme-toggle .segment-item.theme-toggle-button:hover {
+      transform: translateY(-1px);
+      border-color: rgba(142, 190, 242, 0.42);
+      color: #e6f0fb;
+      box-shadow:
+        0 3px 6px rgba(0, 0, 0, 0.5),
+        0 12px 20px rgba(2, 8, 14, 0.4),
+        inset 0 1px 0 var(--edge-inset);
+    }
+    body[data-ui-theme-resolved="dark"] .theme-toggle .segment-item.theme-toggle-button:active {
+      transform: translateY(1px);
+      background: linear-gradient(180deg, #1b2838 0%, #223247 100%);
+      box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.6), 0 1px 0 rgba(255, 255, 255, 0.06);
+    }
+    body[data-ui-theme-resolved="dark"] .theme-toggle .segment-item.theme-toggle-button.active {
+      border-color: rgba(142, 190, 242, 0.55);
+      background:
+        linear-gradient(180deg, #2c4a6e 0%, #213a58 60%, #1b3049 100%),
+        radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.12), transparent 46%);
+      color: #a8d1ff;
+      box-shadow:
+        inset 0 2px 5px rgba(0, 0, 0, 0.45),
+        inset 0 -1px 0 var(--edge-inset),
+        0 1px 2px rgba(0, 0, 0, 0.4);
     }
     .theme-toggle-icon {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 26px;
-      height: 26px;
+      width: 18px;
+      height: 18px;
     }
     .theme-toggle-icon svg {
-      width: 23px;
-      height: 23px;
+      width: 20px;
+      height: 20px;
       fill: none;
       stroke: currentColor;
       stroke-width: 1.85;
@@ -5415,7 +5510,7 @@ async function renderHtml(
       display: grid;
       place-items: center;
       border: 1px solid rgba(16, 42, 67, 0.14);
-      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.66);
+      box-shadow: inset 0 0 0 1px var(--edge-inset);
     }
     .overview-focus-core {
       width: 82px;
@@ -5647,7 +5742,7 @@ async function renderHtml(
       background: var(--card-fill-soft);
       padding: 11px;
       min-height: 92px;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92);
+      box-shadow: inset 0 1px 0 var(--edge-inset);
       color: inherit;
       text-decoration: none;
     }
@@ -5658,7 +5753,7 @@ async function renderHtml(
     .overview-action-item:hover {
       transform: translateY(-1px);
       box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.92),
+        inset 0 1px 0 var(--edge-inset),
         0 14px 28px rgba(17, 24, 39, 0.08);
     }
     .overview-action-item span {
@@ -5713,7 +5808,7 @@ async function renderHtml(
       padding: 12px 13px;
       background: var(--card-fill-soft);
       box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.86),
+        inset 0 1px 0 var(--edge-inset),
         0 10px 20px rgba(15, 23, 42, 0.035);
       color: inherit;
       text-decoration: none;
@@ -5722,7 +5817,7 @@ async function renderHtml(
       transform: translateY(-1px);
       border-color: rgba(17, 24, 39, 0.1);
       box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.88),
+        inset 0 1px 0 var(--edge-inset),
         0 12px 26px rgba(17, 24, 39, 0.06);
     }
     .decision-row-copy {
@@ -5754,7 +5849,7 @@ async function renderHtml(
       padding: 12px;
       background: var(--card-fill-soft);
       box-shadow:
-        inset 0 1px 0 rgba(255,255,255,0.86),
+        inset 0 1px 0 var(--edge-inset),
         0 10px 20px rgba(15, 23, 42, 0.03);
       display: grid;
       gap: 6px;
@@ -5821,8 +5916,8 @@ async function renderHtml(
       inset: 0;
       border-radius: inherit;
       box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.9),
-        inset 0 -1px 0 rgba(255, 255, 255, 0.24);
+        inset 0 1px 0 var(--edge-inset),
+        inset 0 -1px 0 var(--edge-inset);
       pointer-events: none;
     }
     .card, .sidebar, .nav-link, .overview-hero-card { animation-delay: calc(var(--stagger-index, 0) * 36ms); }
@@ -5949,13 +6044,13 @@ async function renderHtml(
       padding: 10px 12px;
       font-family: inherit;
       font-size: 13px;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76);
+      box-shadow: inset 0 1px 0 var(--edge-inset);
     }
     .filters select:focus,
     .filters input:focus {
       outline: none;
       border-color: rgba(0, 113, 227, 0.28);
-      box-shadow: var(--ring-soft), inset 0 1px 0 rgba(255, 255, 255, 0.84);
+      box-shadow: var(--ring-soft), inset 0 1px 0 var(--edge-inset);
     }
     .filter-actions { margin-top: 8px; display: flex; gap: 10px; align-items: center; }
     .btn {
@@ -5976,7 +6071,7 @@ async function renderHtml(
       justify-content: center;
       font-weight: 630;
       box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.88),
+        inset 0 1px 0 var(--edge-inset),
         0 8px 18px rgba(0, 113, 227, 0.08);
       transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, color 180ms ease, background 180ms ease;
     }
@@ -5985,7 +6080,7 @@ async function renderHtml(
       border-color: rgba(0, 113, 227, 0.24);
       color: #004f9f;
       box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.9),
+        inset 0 1px 0 var(--edge-inset),
         0 14px 24px rgba(0, 113, 227, 0.12);
       background:
         linear-gradient(180deg, rgba(238, 247, 255, 0.99), rgba(255, 255, 255, 0.99)),
@@ -5993,7 +6088,7 @@ async function renderHtml(
     }
     .btn:focus-visible {
       outline: none;
-      box-shadow: var(--ring-soft), inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 12px 24px rgba(0, 113, 227, 0.1);
+      box-shadow: var(--ring-soft), inset 0 1px 0 var(--edge-inset), 0 12px 24px rgba(0, 113, 227, 0.1);
     }
     .board { margin-top: 10px; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
     .lane {
@@ -6014,7 +6109,7 @@ async function renderHtml(
       padding: 10px;
       background: var(--card-fill-soft);
       box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.84),
+        inset 0 1px 0 var(--edge-inset),
         0 8px 18px rgba(15, 23, 42, 0.03);
       font-size: 13px;
       line-height: 1.56;
@@ -6041,7 +6136,7 @@ async function renderHtml(
       padding: 11px;
       background: var(--card-fill-soft);
       box-shadow:
-        inset 0 1px 0 rgba(255,255,255,0.86),
+        inset 0 1px 0 var(--edge-inset),
         0 10px 20px rgba(15, 23, 42, 0.03);
     }
     .queue-actions { margin-top: 7px; display: flex; align-items: center; gap: 8px; }
@@ -6057,7 +6152,7 @@ async function renderHtml(
       flex-direction: column;
       gap: 4px;
       box-shadow:
-        inset 0 1px 0 rgba(255,255,255,0.88),
+        inset 0 1px 0 var(--edge-inset),
         0 12px 24px rgba(15, 23, 42, 0.04);
     }
     .status-chip span { color: #6d6f75; font-size: 12px; letter-spacing: 0.01em; }
@@ -6093,7 +6188,7 @@ async function renderHtml(
       background: var(--card-fill-soft);
       padding: 12px;
       box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.88),
+        inset 0 1px 0 var(--edge-inset),
         0 10px 20px rgba(15, 23, 42, 0.035);
       display: grid;
       gap: 4px;
@@ -6142,7 +6237,7 @@ async function renderHtml(
       padding: 18px;
       background: var(--card-fill-soft);
       box-shadow:
-        inset 0 1px 0 rgba(255,255,255,0.9),
+        inset 0 1px 0 var(--edge-inset),
         0 18px 34px rgba(15, 23, 42, 0.05);
       display: grid;
       gap: 12px;
@@ -6250,7 +6345,7 @@ async function renderHtml(
       display: grid;
       gap: 4px;
       box-shadow:
-        inset 0 1px 0 rgba(255,255,255,0.84),
+        inset 0 1px 0 var(--edge-inset),
         0 10px 20px rgba(15, 23, 42, 0.03);
     }
     .timeline-stat span {
@@ -6284,7 +6379,7 @@ async function renderHtml(
       border: 1px solid rgba(17, 24, 39, 0.12);
       display: grid;
       place-items: center;
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.54);
+      box-shadow: inset 0 0 0 1px var(--edge-inset);
     }
     .signal-gauge-core {
       width: 44px;
@@ -6393,7 +6488,7 @@ async function renderHtml(
         radial-gradient(circle at 50% 0%, rgba(221, 232, 255, 0.18), transparent 58%);
       gap: 6px;
       box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.88),
+        inset 0 1px 0 var(--edge-inset),
         0 8px 18px rgba(17, 24, 39, 0.05);
     }
     body[data-ui-theme-resolved="dark"] {
@@ -6402,6 +6497,15 @@ async function renderHtml(
         radial-gradient(circle at 8% -10%, rgba(41, 88, 143, 0.28), transparent 34%),
         radial-gradient(circle at 96% 0%, rgba(62, 93, 134, 0.22), transparent 32%),
         linear-gradient(180deg, #07111a 0%, #0b1622 46%, #0d1a27 100%);
+      --edge-inset: rgba(255, 255, 255, 0.07);
+      --edge-line: rgba(255, 255, 255, 0.06);
+    }
+    body[data-ui-theme-resolved="dark"] .calendar-event {
+      background: linear-gradient(180deg, rgba(23, 32, 45, 0.9), rgba(19, 27, 39, 0.94));
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+    body[data-ui-theme-resolved="dark"] .overview-usage-card {
+      background: linear-gradient(180deg, rgba(24, 33, 47, 0.95), rgba(17, 25, 37, 0.97));
     }
     body[data-ui-theme-resolved="dark"]::before {
       background:
@@ -6663,7 +6767,7 @@ async function renderHtml(
       border-radius: 16px;
       background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(250, 252, 255, 0.96));
       padding: 11px;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.86);
+      box-shadow: inset 0 1px 0 var(--edge-inset);
     }
     .readiness-chip .label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; }
     .readiness-chip .score { font-size: 22px; margin-top: 4px; letter-spacing: -0.02em; }
@@ -6687,7 +6791,7 @@ async function renderHtml(
       background:
         linear-gradient(140deg, rgba(255, 255, 255, 0.98), rgba(250, 252, 255, 0.95)),
         radial-gradient(circle at 84% 14%, rgba(255, 255, 255, 0.74), transparent 48%);
-      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.56);
+      box-shadow: inset 0 0 0 1px var(--edge-inset);
       text-align: center;
       position: relative;
       overflow: hidden;
@@ -6747,7 +6851,7 @@ async function renderHtml(
         linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(249, 251, 255, 0.97)),
         radial-gradient(circle at 100% 0%, rgba(221, 232, 255, 0.18), transparent 52%);
       box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.82),
+        inset 0 1px 0 var(--edge-inset),
         0 16px 34px rgba(17, 24, 39, 0.06);
       display: grid;
       gap: 12px;
@@ -6767,7 +6871,7 @@ async function renderHtml(
         linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(250, 252, 255, 0.95)),
         radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--agent-accent) 12%, transparent), transparent 62%);
       box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.8),
+        inset 0 1px 0 var(--edge-inset),
         0 10px 20px rgba(17, 24, 39, 0.05);
     }
     .staff-avatar .agent-stage {
@@ -6950,7 +7054,7 @@ async function renderHtml(
         radial-gradient(circle at 100% 0%, rgba(221, 232, 255, 0.16), transparent 52%);
       padding: 14px;
       box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.8),
+        inset 0 1px 0 var(--edge-inset),
         0 18px 36px rgba(17, 24, 39, 0.06);
     }
     .file-sidebar { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 10px; }
@@ -6975,14 +7079,14 @@ async function renderHtml(
       background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(249, 251, 255, 0.94));
       color: #4d5560;
       box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.84),
+        inset 0 1px 0 var(--edge-inset),
         0 8px 18px rgba(17, 24, 39, 0.04);
     }
     .file-facet-switch .segment-item:hover {
       border-color: rgba(17, 24, 39, 0.12);
       background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(250, 252, 255, 0.97));
       box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.88),
+        inset 0 1px 0 var(--edge-inset),
         0 10px 20px rgba(17, 24, 39, 0.06);
     }
     .file-facet-switch .segment-item.active {
@@ -7007,13 +7111,13 @@ async function renderHtml(
       font-size: 13px;
       font-family: inherit;
       color: #1d1d1f;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+      box-shadow: inset 0 1px 0 var(--edge-inset);
     }
     .file-filter-input:focus,
     .file-token-input:focus {
       outline: none;
       border-color: rgba(0, 113, 227, 0.24);
-      box-shadow: var(--ring-soft), inset 0 1px 0 rgba(255, 255, 255, 0.88);
+      box-shadow: var(--ring-soft), inset 0 1px 0 var(--edge-inset);
     }
     .file-filter-input::placeholder,
     .file-token-input::placeholder,
@@ -7063,7 +7167,7 @@ async function renderHtml(
       display: grid;
       gap: 4px;
       cursor: pointer;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+      box-shadow: inset 0 1px 0 var(--edge-inset);
       transition: border-color 180ms ease, transform 180ms ease, background 180ms ease, box-shadow 180ms ease;
     }
     .file-nav-item[hidden] {
@@ -7074,7 +7178,7 @@ async function renderHtml(
       background: linear-gradient(180deg, rgba(247, 250, 255, 0.99), rgba(255, 255, 255, 0.98));
       transform: translateY(-1px);
       box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.84),
+        inset 0 1px 0 var(--edge-inset),
         0 10px 24px rgba(17, 24, 39, 0.06);
     }
     .file-nav-item.active {
@@ -7083,7 +7187,7 @@ async function renderHtml(
         linear-gradient(180deg, rgba(240, 247, 255, 0.99), rgba(255, 255, 255, 0.99)),
         radial-gradient(circle at 0% 0%, rgba(0, 113, 227, 0.08), transparent 42%);
       box-shadow:
-        inset 0 0 0 1px rgba(255, 255, 255, 0.84),
+        inset 0 0 0 1px var(--edge-inset),
         0 14px 28px rgba(0, 113, 227, 0.09);
     }
     .file-nav-title { font-size: 14px; font-weight: 650; color: #1d1d1f; }
@@ -7115,11 +7219,11 @@ async function renderHtml(
       resize: vertical;
       outline: none;
       box-sizing: border-box;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.74);
+      box-shadow: inset 0 1px 0 var(--edge-inset);
     }
     .file-editor-textarea:focus {
       border-color: rgba(0, 113, 227, 0.24);
-      box-shadow: var(--ring-soft), inset 0 1px 0 rgba(255, 255, 255, 0.78);
+      box-shadow: var(--ring-soft), inset 0 1px 0 var(--edge-inset);
     }
     .docs-toolbar {
       margin-top: 10px;
@@ -7139,7 +7243,7 @@ async function renderHtml(
       padding: 11px 13px;
       font-size: 14px;
       font-family: inherit;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+      box-shadow: inset 0 1px 0 var(--edge-inset);
     }
     .docs-source-filter-wrap select {
       width: 100%;
@@ -7152,13 +7256,13 @@ async function renderHtml(
       font-size: 13px;
       color: #364152;
       font-family: inherit;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+      box-shadow: inset 0 1px 0 var(--edge-inset);
     }
     .docs-search input:focus,
     .docs-source-filter-wrap select:focus {
       outline: none;
       border-color: rgba(0, 113, 227, 0.24);
-      box-shadow: var(--ring-soft), inset 0 1px 0 rgba(255, 255, 255, 0.88);
+      box-shadow: var(--ring-soft), inset 0 1px 0 var(--edge-inset);
     }
     .docs-grid { margin-top: 10px; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
     .doc-card {
@@ -7166,7 +7270,7 @@ async function renderHtml(
       border-radius: 16px;
       padding: 11px;
       background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(250, 252, 255, 0.96));
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.84);
+      box-shadow: inset 0 1px 0 var(--edge-inset);
       display: grid;
       gap: 6px;
     }
@@ -7262,7 +7366,7 @@ async function renderHtml(
     body[data-ui-theme-resolved="dark"] .filters select,
     body[data-ui-theme-resolved="dark"] .filters input {
       color: #eef5fb !important;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
+      box-shadow: inset 0 1px 0 var(--edge-inset) !important;
     }
     body[data-ui-theme-resolved="dark"] .overview-kpi-label,
     body[data-ui-theme-resolved="dark"] .overview-kpi-detail,
@@ -7312,7 +7416,7 @@ async function renderHtml(
       border-radius: 16px;
       padding: 12px;
       background: linear-gradient(180deg, rgba(247, 252, 255, 0.98), rgba(255, 255, 255, 0.97));
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.84);
+      box-shadow: inset 0 1px 0 var(--edge-inset);
     }
     .quota-compact { display: grid; gap: 10px; margin-top: 8px; }
     .quota-row {
@@ -7333,7 +7437,7 @@ async function renderHtml(
       height: 180px;
       border-radius: 50%;
       border: 1px solid rgba(21, 82, 112, 0.18);
-      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.52), 0 8px 18px rgba(16, 53, 76, 0.08);
+      box-shadow: inset 0 0 0 1px var(--edge-inset), 0 8px 18px rgba(16, 53, 76, 0.08);
       position: relative;
       margin: 0 auto;
     }
@@ -7443,7 +7547,7 @@ async function renderHtml(
     body[data-ui-theme-resolved="dark"] .filters select,
     body[data-ui-theme-resolved="dark"] .filters input {
       color: #eef5fb !important;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
+      box-shadow: inset 0 1px 0 var(--edge-inset) !important;
     }
     body[data-ui-theme-resolved="dark"] .overview-kpi-label,
     body[data-ui-theme-resolved="dark"] .overview-kpi-detail,
@@ -7593,6 +7697,53 @@ async function renderHtml(
       .file-editor-panel { grid-template-rows: auto minmax(280px, 1fr) auto; }
       .file-editor-textarea { min-height: 360px; }
     }
+    .badge.running { color: #0059b4; border-color: rgba(0, 113, 227, 0.32); background: rgba(236, 246, 255, 0.95); }
+    .badge.waiting_approval { color: #94680e; border-color: rgba(181, 127, 16, 0.32); background: rgba(255, 248, 232, 0.95); }
+    .badge.error { color: #b53125; border-color: rgba(210, 63, 49, 0.34); background: rgba(255, 240, 238, 0.95); }
+    .inspector-sidebar code { word-break: break-all; }
+    .global-visibility-card::-webkit-scrollbar { height: 8px; }
+    .global-visibility-card::-webkit-scrollbar-track { background: transparent; }
+    .global-visibility-card::-webkit-scrollbar-thumb { background: rgba(17, 24, 39, 0.16); border-radius: 999px; }
+    body[data-ui-theme-resolved="dark"] .global-visibility-card::-webkit-scrollbar-thumb { background: rgba(132, 164, 201, 0.22); }
+    @media (max-width: 720px) {
+      .app-shell { padding: 10px; gap: 10px; }
+      .sidebar, .panel { border-radius: 18px; }
+      .sidebar { padding: 14px; }
+      .panel { padding: 16px; }
+      .section-title { font-size: 22px; }
+      .brand { padding: 13px; }
+      .nav-links { gap: 6px; }
+      .nav-link { padding: 10px 12px; }
+      .section-hero-head { gap: 10px; }
+      .panel-toggle { white-space: nowrap; }
+      .global-visibility-card { -webkit-overflow-scrolling: touch; }
+    }
+    body[data-ui-theme-resolved="dark"] .nav-link:hover,
+    body[data-ui-theme-resolved="dark"] .quick-chip:hover,
+    body[data-ui-theme-resolved="dark"] .file-nav-item:hover {
+      background: linear-gradient(180deg, rgba(31, 45, 63, 0.92), rgba(24, 36, 52, 0.94));
+      border-color: rgba(132, 164, 201, 0.22);
+      box-shadow: 0 14px 30px rgba(2, 8, 14, 0.3);
+    }
+    body[data-ui-theme-resolved="dark"] .panel-toggle:hover,
+    body[data-ui-theme-resolved="dark"] .btn:hover {
+      background: linear-gradient(180deg, rgba(31, 45, 63, 0.96), rgba(24, 36, 52, 0.96));
+      border-color: rgba(132, 164, 201, 0.26);
+      color: #a9c7e6;
+      box-shadow: 0 12px 26px rgba(2, 8, 14, 0.3);
+    }
+    body[data-ui-theme-resolved="dark"] .segment-item:hover {
+      background: rgba(40, 56, 76, 0.92);
+      color: #eef5fb;
+    }
+    body[data-ui-theme-resolved="dark"] .overview-action-item:hover,
+    body[data-ui-theme-resolved="dark"] .decision-row:hover,
+    body[data-ui-theme-resolved="dark"] .file-facet-switch .segment-item:hover {
+      background: linear-gradient(180deg, rgba(31, 45, 63, 0.9), rgba(24, 36, 52, 0.92));
+      border-color: rgba(132, 164, 201, 0.2);
+      box-shadow: inset 0 1px 0 rgba(132, 164, 201, 0.1), 0 12px 26px rgba(2, 8, 14, 0.28);
+    }
+    body[data-ui-theme-resolved="dark"] tr:hover td { background: rgba(40, 56, 76, 0.5); }
     @media (prefers-reduced-motion: reduce) {
       * {
         animation-duration: 0.01ms !important;
@@ -7632,6 +7783,7 @@ async function renderHtml(
       background: rgba(42, 59, 78, 0.92) !important;
       border-color: rgba(132, 164, 201, 0.18) !important;
     }
+    body[data-ui-theme-resolved="dark"] details summary,
     body[data-ui-theme-resolved="dark"] .exec-title,
     body[data-ui-theme-resolved="dark"] .exec-metric,
     body[data-ui-theme-resolved="dark"] .signal-gauge-head span,
@@ -7924,6 +8076,7 @@ async function renderHtml(
       <nav class="nav-links">${sectionNav}</nav>
     </aside>
     <main class="panel">
+      ${DEMO_MODE ? `<div class="demo-banner">演示数据模式（DEMO_MODE=true）：展示内置示例数据，未连接真实 OpenClaw。</div>` : ""}
       <header class="section-hero-head">
         <div class="section-head-copy">
           <h2 class="section-title">${escapeHtml(sectionTitle)}</h2>
@@ -7937,6 +8090,13 @@ async function renderHtml(
     </main>
     <aside class="sidebar inspector-sidebar">
       <div class="card">
+        <h2>${escapeHtml(t("OpenClaw Gateway", "OpenClaw 网关"))}</h2>
+        <div class="meta">${escapeHtml(t("Endpoint", "地址"))}：<code>${escapeHtml(GATEWAY_URL)}</code></div>
+        <div class="meta">${badge(gatewayHealth.status, gatewayHealth.label)} · ${escapeHtml(t("Snapshot age", "快照延迟"))}：${escapeHtml(gatewayHealth.ageLabel)}</div>
+        <div class="meta">${escapeHtml(t("Read-only mode", "只读模式"))}：${escapeHtml(READONLY_MODE ? t("On", "开启") : t("Off", "关闭"))} · ${escapeHtml(t("Live sessions", "活跃会话"))}：${liveSessionCount}</div>
+        ${gatewayHealth.hint}
+      </div>
+      <div class="card" style="margin-top:10px;">
         <h2>${escapeHtml(t("Current status", "当前状态"))}</h2>
         <div class="meta">${escapeHtml(t("Active sessions", "活跃会话"))}：${liveSessionCount}</div>
         <div class="meta">${escapeHtml(t("Tasks under watch", "正在观察中的任务"))}：${taskCertaintyCards.length}</div>
@@ -7982,6 +8142,94 @@ async function renderHtml(
   ${quotaResetScript}
 </body>
 </html>`;
+}
+
+function formatAgeLabel(ageMs: number, language: UiLanguage): string {
+  const totalSeconds = Math.max(0, Math.floor(ageMs / 1000));
+  if (totalSeconds < 60) return pickUiText(language, `${totalSeconds}s ago`, `${totalSeconds} 秒前`);
+  const totalMinutes = Math.floor(totalSeconds / 60);
+  if (totalMinutes < 60) return pickUiText(language, `${totalMinutes}m ago`, `${totalMinutes} 分钟前`);
+  const totalHours = Math.floor(totalMinutes / 60);
+  if (totalHours < 24) return pickUiText(language, `${totalHours}h ago`, `${totalHours} 小时前`);
+  return pickUiText(language, `${Math.floor(totalHours / 24)}d ago`, `${Math.floor(totalHours / 24)} 天前`);
+}
+
+function resolveGatewayHealth(generatedAt: string, language: UiLanguage, nowMs: number = Date.now()) {
+  const parsed = Date.parse(generatedAt);
+  const ageMs = Number.isNaN(parsed) ? Number.MAX_SAFE_INTEGER : Math.max(0, nowMs - parsed);
+  const status = ageMs > 5 * 60_000 ? "stale" : ageMs > 60_000 ? "warn" : "ok";
+  const label =
+    status === "stale"
+      ? pickUiText(language, "Data source is stale", "数据源已过期")
+      : status === "warn"
+        ? pickUiText(language, "Data source is slow", "数据源延迟较高")
+        : pickUiText(language, "Connected", "连接正常");
+  const hint =
+    status === "stale"
+      ? `<div class="meta" style="color: var(--warn);">${escapeHtml(pickUiText(language, "OpenClaw Gateway is not responding. Start the Gateway, and if this is a new device, complete pairing first.", "OpenClaw 网关未响应。请先启动 Gateway；若为新设备，请先完成配对。"))}</div>`
+      : "";
+  return { status, label, ageLabel: formatAgeLabel(ageMs, language), hint };
+}
+
+function sessionStateLabelLocal(state: AgentRunState, language: UiLanguage): string {
+  if (state === "running") return pickUiText(language, "Running", "执行中");
+  if (state === "waiting_approval") return pickUiText(language, "Waiting approval", "待审批");
+  if (state === "blocked") return pickUiText(language, "Blocked", "阻塞");
+  if (state === "error") return pickUiText(language, "Error", "异常");
+  return pickUiText(language, "Idle", "待命");
+}
+
+function renderSessionsSection(snapshot: ReadModelSnapshot, language: UiLanguage): string {
+  const statusBySession = new Map<string, SessionStatusSnapshot>();
+  for (const status of snapshot.statuses ?? []) {
+    if (!statusBySession.has(status.sessionKey)) statusBySession.set(status.sessionKey, status);
+  }
+  const stateRank: Record<AgentRunState, number> = {
+    running: 0,
+    waiting_approval: 1,
+    blocked: 2,
+    error: 3,
+    idle: 4,
+  };
+  const sessions = [...(snapshot.sessions ?? [])].sort((a, b) => {
+    const rankDiff = (stateRank[a.state] ?? 5) - (stateRank[b.state] ?? 5);
+    if (rankDiff !== 0) return rankDiff;
+    const at = Date.parse(a.lastMessageAt ?? "");
+    const bt = Date.parse(b.lastMessageAt ?? "");
+    return (Number.isNaN(bt) ? 0 : bt) - (Number.isNaN(at) ? 0 : at);
+  });
+  const rows =
+    sessions.length === 0
+      ? `<div class="group-item"><div class="meta">${escapeHtml(pickUiText(language, "No session signals yet. Open the Gateway and start an OpenClaw session to see it here.", "暂无会话信号。启动 Gateway 并打开一个 OpenClaw 会话后，会显示在这里。"))}</div></div>`
+      : sessions
+          .map((session) => {
+            const status = statusBySession.get(session.sessionKey);
+            const model = status?.model ? escapeHtml(status.model) : pickUiText(language, "Unknown model", "未知模型");
+            const tokens =
+              status && (status.tokensIn !== undefined || status.tokensOut !== undefined)
+                ? `${formatInt(status.tokensIn ?? 0)} → ${formatInt(status.tokensOut ?? 0)}`
+                : pickUiText(language, "No token signal", "暂无 token 信号");
+            const lastActivity = session.lastMessageAt
+              ? formatAgeLabel(Math.max(0, Date.now() - Date.parse(session.lastMessageAt)), language)
+              : pickUiText(language, "No activity", "暂无活动");
+            const label = session.label?.trim() ? escapeHtml(session.label) : `<code>${escapeHtml(session.sessionKey)}</code>`;
+            const agent = session.agentId?.trim() ? escapeHtml(session.agentId) : pickUiText(language, "Unassigned", "未分配");
+            return `<div class="group-item">
+              <div class="group-item-head"><strong>${label}</strong>${badge(session.state, escapeHtml(sessionStateLabelLocal(session.state, language)))}</div>
+              <div class="meta">${escapeHtml(pickUiText(language, "Agent", "智能体"))}：${agent} · ${escapeHtml(pickUiText(language, "Model", "模型"))}：${model}</div>
+              <div class="meta">${escapeHtml(pickUiText(language, "Tokens in → out", "输入 → 输出"))}：${escapeHtml(tokens)} · ${escapeHtml(pickUiText(language, "Last activity", "最近活动"))}：${escapeHtml(lastActivity)}</div>
+            </div>`;
+          })
+          .join("");
+  return `<section class="card">
+    <h2>${escapeHtml(pickUiText(language, "Sessions", "会话"))}</h2>
+    <div class="meta">${escapeHtml(pickUiText(language, "Live sessions, model, state and token activity from the OpenClaw Gateway.", "来自 OpenClaw 网关的实时会话：状态、模型与 token 活动。"))}</div>
+    <div class="group-section">${rows}</div>
+  </section>`;
+}
+
+export function renderSessionsSectionForSmoke(snapshot: ReadModelSnapshot, language: UiLanguage = "en"): string {
+  return renderSessionsSection(snapshot, language);
 }
 
 function parseTaskFilters(searchParams: URLSearchParams, strict: boolean): TaskQueryFilters {
@@ -9711,7 +9959,9 @@ function renderThemePreferenceScript(language: UiLanguage): string {
     } catch {}
   };
 
+  const urlTheme = new URLSearchParams(window.location.search).get('theme');
   const initialMode = (() => {
+    if (urlTheme === 'light' || urlTheme === 'dark' || urlTheme === 'auto') return urlTheme;
     try {
       return window.localStorage.getItem(storageKey) || body.dataset.uiTheme || 'auto';
     } catch {

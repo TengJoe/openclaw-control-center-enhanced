@@ -14,9 +14,26 @@
 2. `npm test`
 3. `npm run validate`
 4. `npm run dev` (smoke monitor run)
-5. Optional UI mode: `UI_MODE=true npm run dev`
+5. Optional UI mode: `UI_MODE=true npm run dev` (or `npm run start`)
   - In restricted sandboxes, `listen EPERM` on `127.0.0.1:*` is environment-only (socket bind restriction), not a control-center functional regression.
 6. Optional continuous monitor: `npm run dev:continuous`
+7. Optional UI preview without OpenClaw: `npm run dev:demo` (DEMO_MODE=true, built-in sample data)
+8. Optional single-file bundle (faster startup, lower memory):
+  - `npm run build:single` produces `dist/control-center.js`
+  - `npm run start:single` (or `node dist/control-center.js`)
+
+## 2b) Startup & memory baseline
+
+Measured on Windows, DEMO_MODE=true readonly UI (time to /healthz):
+
+| Mode | Startup | RSS (start) | RSS (25s resident) |
+|---|---|---|---|
+| tsx (dev) | ~515ms | ~116 MB | ~70 MB |
+| single-file bundle | ~515ms | ~89 MB | ~50 MB |
+
+- The single-file bundle drops the tsx/esbuild runtime and is the recommended
+  distribution path (`npm run build:single` + `node dist/control-center.js`).
+- DEMO_MODE is readonly and skips monitor artifact writes.
 
 ## 3) Enable live mode safely
 1. Confirm baseline safety checks:

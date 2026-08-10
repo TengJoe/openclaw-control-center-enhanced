@@ -30,6 +30,20 @@ const RUNTIME_SESSION_INDEX_CONNECTOR_PATH = join(OPENCLAW_AGENTS_DIR, "*", "ses
 const SUBSCRIPTION_BUDGET_FALLBACK_SOURCE = "snapshot budgetSummary (30d cost limit)";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Local-timezone date key (YYYY-MM-DD). The previous implementation used
+ * UTC (toISOString().slice(0,10)), which made "today" drift by one day in
+ * UTC+ timezones between 00:00 and 08:00 local time.
+ */
+function localDateKey(ms: number): string {
+  const d = new Date(ms);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 const CONTEXT_WARN_RATIO = 0.7;
 const CONTEXT_CRITICAL_RATIO = 0.9;
 const BUDGET_WARN_RATIO = 0.8;
@@ -403,7 +417,7 @@ export function computeUsageCostSnapshot(
 ): UsageCostSnapshot {
   const generatedAt = new Date().toISOString();
   const now = Date.now();
-  const todayIso = new Date(now).toISOString().slice(0, 10);
+  const todayIso = localDateKey(now);
 
   const sessionByKey = new Map(snapshot.sessions.map((session) => [session.sessionKey, session]));
   const sessionProjectMap = buildSessionProjectMap(snapshot);
@@ -854,7 +868,7 @@ async function loadRuntimeUsageEventsForAgent(
         const timestamp = new Date(timestampMs).toISOString();
         fileEvents.push({
           timestamp,
-          day: timestamp.slice(0, 10),
+          day: localDateKey(timestampMs),
           sessionId,
           sessionKey: context?.sessionKey,
           agentId: context?.agentId ?? agentId,
@@ -1109,7 +1123,7 @@ function previousWindowAverageCostFromDailyMap(
   let total = 0;
 
   for (let dayMs = previousLower; dayMs <= previousUpper; dayMs += DAY_MS) {
-    const day = new Date(dayMs).toISOString().slice(0, 10);
+    const day = localDateKey(dayMs);
     const value = dailyCostByDay.get(day);
     if (value !== undefined) {
       hasBaselineSignal = true;
@@ -1942,8 +1956,8 @@ function finalizeSubscriptionUsage(
     budget && typeof budget.limitCost30d === "number" && Number.isFinite(budget.limitCost30d) && budget.limitCost30d > 0
       ? budget.limitCost30d
       : undefined;
-  const todayIso = new Date().toISOString().slice(0, 10);
-  const cycleStartIso = new Date(Date.now() - 29 * DAY_MS).toISOString().slice(0, 10);
+  const todayIso = localDateKey(Date.now());
+  const cycleStartIso = localDateKey(Date.now() - 29 * DAY_MS);
 
   if (!subscriptionUsage || subscriptionUsage.status === "not_connected") {
     if (runtimeConsumed === undefined) return subscriptionUsage ?? defaultSubscriptionUsage();

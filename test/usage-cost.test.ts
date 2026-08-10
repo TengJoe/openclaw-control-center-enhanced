@@ -26,7 +26,7 @@ test("usage-cost snapshot computes context percent and burn-rate status when sou
     cost: 30,
     costLimit: 100,
   });
-  const todayIso = new Date().toISOString().slice(0, 10);
+  const todayIso = localDayKey(Date.now());
 
   const usage = computeUsageCostSnapshot(
     snapshot,
@@ -61,7 +61,11 @@ test("usage-cost snapshot uses runtime session events for real requests, trends,
     costLimit: 50,
   });
 
-  const now = Date.now();
+  const now = (() => {
+    const d = new Date();
+    d.setHours(12, 0, 0, 0);
+    return d.getTime();
+  })();
   const usage = computeUsageCostSnapshot(snapshot, [], [], {
     sourceStatus: "connected",
     sessionContexts: [
@@ -516,11 +520,19 @@ function buildSnapshotFixture(overrides?: {
   };
 }
 
+function localDayKey(ms: number): string {
+  const d = new Date(ms);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 function runtimeEvent(timestampMs: number, tokens: number, cost: number) {
   const timestamp = new Date(timestampMs).toISOString();
   return {
     timestamp,
-    day: timestamp.slice(0, 10),
+    day: localDayKey(timestampMs),
     sessionId: "sid-1",
     sessionKey: "s-1",
     agentId: "pandas",
