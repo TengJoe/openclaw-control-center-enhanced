@@ -20,6 +20,11 @@ For detailed attribution and change scope:
 
 Language: **English** | [中文](README.md)
 
+## Preview & distribution
+
+- **Preview the UI without OpenClaw**: `npm run dev:demo` (equivalent to `DEMO_MODE=true`) renders all panels with built-in sample data.
+- **Single-file bundle**: `npm run build:single` produces `dist/control-center.js` (~0.9 MB); run it with `node dist/control-center.js` — no tsx / npm install needed at runtime.
+
 ## Why this exists
 - One local place to see whether OpenClaw is healthy, busy, blocked, or drifting.
 - Built for non-technical operators who need observability and certainty, not raw backend payloads.
