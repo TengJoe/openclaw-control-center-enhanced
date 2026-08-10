@@ -20,6 +20,11 @@ Fork 说明：这个 fork 额外收紧了 localhost 鉴权边界，并在只读 
 
 语言： [English](README.en.md) | **中文**
 
+## 预览与分发
+
+- **无 OpenClaw 环境预览 UI**：`npm run dev:demo`（等价 `DEMO_MODE=true`），使用内置示例数据渲染全部面板，便于快速看效果。
+- **单文件打包**：`npm run build:single` 产出 `dist/control-center.js`（~0.9MB），之后用 `node dist/control-center.js` 直接启动，无需 tsx / npm install。
+
 ## 这个项目是做什么的
 - 给 OpenClaw 提供一个本地控制中心，集中看系统是否稳定、谁在工作、哪些任务卡住了、今天花了多少。
 - 面向非技术用户，重点是“看得懂、看得准”，不是暴露原始后端 payload。

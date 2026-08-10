@@ -27,6 +27,15 @@ Use these defaults for the public project:
 - `APPROVAL_ACTIONS_ENABLED=false`
 - `IMPORT_MUTATION_ENABLED=false`
 
+### 3b. Recommended distribution artifact
+Build the single-file bundle and ship it with plain Node (no npm install for the operator):
+```bash
+npm run build:single
+# ship dist/control-center.js
+node dist/control-center.js   # or npm run start:single
+```
+Optional preview without OpenClaw: `npm run dev:demo` (DEMO_MODE=true).
+
 ### 4. Create a standalone local git repo here
 If this directory is not already its own git repo:
 ```bash
