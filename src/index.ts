@@ -24,6 +24,7 @@ import { startUiServer } from "./ui/server";
 
 const CONTINUOUS_MODE = process.env.MONITOR_CONTINUOUS === "true";
 const UI_MODE = process.env.UI_MODE === "true";
+const DEMO_MODE = process.env.DEMO_MODE === "true";
 const UI_PORT = Number.parseInt(process.env.UI_PORT ?? "4310", 10);
 const COMMAND = normalizeCommand(process.env.APP_COMMAND ?? process.argv[2]);
 const COMMAND_ARG =
@@ -49,6 +50,7 @@ async function start(): Promise<void> {
       maxTasksPerRun: TASK_HEARTBEAT_MAX_TASKS_PER_RUN,
     },
     pollingIntervalsMs: POLLING_INTERVALS_MS,
+    demoMode: DEMO_MODE,
     networkCalls: !READONLY_MODE,
     continuousMode: CONTINUOUS_MODE,
     command: COMMAND ?? "monitor",

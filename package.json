@@ -6,6 +6,8 @@
   "type": "commonjs",
   "scripts": {
     "dev": "node --import tsx src/index.ts",
+    "start": "UI_MODE=true node --import tsx src/index.ts",
+    "dev:demo": "DEMO_MODE=true UI_MODE=true node --import tsx src/index.ts",
     "dev:continuous": "MONITOR_CONTINUOUS=true node --import tsx src/index.ts",
     "dev:ui": "UI_MODE=true node --import tsx src/index.ts",
     "smoke:ui": "node scripts/ui-smoke.js",
