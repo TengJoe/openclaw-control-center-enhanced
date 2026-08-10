@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **DEMO preview mode**: `DEMO_MODE=true` (or `npm run dev:demo`) renders the UI with built-in sample sessions/cron/approvals so the dashboard can be previewed without an OpenClaw install; a visible banner marks demo data.
+- **Single-file bundle**: `npm run build:single` produces `dist/control-center.js` (~0.9 MB) that runs with plain `node` (no tsx / npm install needed); `npm run start:single` convenience script.
+- `npm run start` one-command UI startup (equivalent to `UI_MODE=true npm run dev`).
+- Performance baselines documented in `docs/RUNBOOK.md` (single-file bundle: ~89 MB startup / ~50 MB resident vs tsx ~116 MB / ~70 MB).
+
 - New **Sessions** dashboard section (nav: 会话 / Sessions) with live session cards: state badge (running / waiting approval / blocked / error / idle), agent, model, token in→out, and last activity, plus an actionable empty state.
 - **OpenClaw Gateway** status card in the inspector sidebar showing endpoint, connection health, snapshot age, read-only mode and live session count, with a pairing/start-Gateway hint when the data source is stale (aligned with OpenClaw's actionable connection messaging).
 - GitHub Actions CI workflow (`.github/workflows/ci.yml`) that installs dependencies, runs the test suite, and builds the project on Node 22 for every push and pull request.

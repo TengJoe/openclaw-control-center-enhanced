@@ -120,6 +120,7 @@ import type {
 } from "../types";
 
 const SNAPSHOT_PATH = join(process.cwd(), "runtime", "last-snapshot.json");
+const DEMO_MODE = process.env.DEMO_MODE === "true";
 const OPENCLAW_HOME_DIR = process.env.OPENCLAW_HOME?.trim() || join(homedir(), ".openclaw");
 const OPENCLAW_CRON_JOBS_CANDIDATES = [
   join(OPENCLAW_HOME_DIR, "cron", "jobs.json"),
@@ -5115,6 +5116,21 @@ async function renderHtml(
     }
     .ui-preload .app-shell { opacity: 1; transform: translateY(0); }
     body.ui-ready .app-shell { opacity: 1; transform: translateY(0); transition: opacity 260ms ease, transform 320ms ease; }
+    .demo-banner {
+      margin: 0 0 14px;
+      padding: 8px 14px;
+      border-radius: 14px;
+      font-size: 12.5px;
+      font-weight: 600;
+      background: linear-gradient(90deg, #fff4d6, #ffe9b8);
+      color: #7a5a12;
+      border: 1px solid #f0d48a;
+    }
+    body[data-ui-theme-resolved="dark"] .demo-banner {
+      background: linear-gradient(90deg, #332c12, #2b2510);
+      color: #f0d48a;
+      border-color: #55461a;
+    }
     body.page-leave .app-shell { opacity: 0; transform: translateY(10px) scale(0.996); transition: opacity 140ms ease, transform 150ms ease; }
     body::before {
       content: "";
@@ -8049,6 +8065,7 @@ async function renderHtml(
       <nav class="nav-links">${sectionNav}</nav>
     </aside>
     <main class="panel">
+      ${DEMO_MODE ? `<div class="demo-banner">演示数据模式（DEMO_MODE=true）：展示内置示例数据，未连接真实 OpenClaw。</div>` : ""}
       <header class="section-hero-head">
         <div class="section-head-copy">
           <h2 class="section-title">${escapeHtml(sectionTitle)}</h2>

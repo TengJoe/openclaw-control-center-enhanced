@@ -29,6 +29,7 @@ This document is the quickest way to orient yourself inside the repository befor
 - Thin wrappers around OpenClaw interfaces and local fallbacks
 - Best home for CLI / file / gateway integration boundaries
 - Keep policy-free and transport-focused when possible
+- `demo-client.ts`: built-in sample data client used when `DEMO_MODE=true` for UI preview without an OpenClaw install
 
 ### `src/adapters/`
 - Cross-layer adapters that assemble multiple client/runtime calls into a higher-level read model
