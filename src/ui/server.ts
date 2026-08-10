@@ -6492,13 +6492,20 @@ async function renderHtml(
         0 8px 18px rgba(17, 24, 39, 0.05);
     }
     body[data-ui-theme-resolved="dark"] {
-            --edge-inset: rgba(255, 255, 255, 0.07);
-      --edge-line: rgba(255, 255, 255, 0.06);
-color: #e8eef6;
+      color: #e8eef6;
       background:
         radial-gradient(circle at 8% -10%, rgba(41, 88, 143, 0.28), transparent 34%),
         radial-gradient(circle at 96% 0%, rgba(62, 93, 134, 0.22), transparent 32%),
         linear-gradient(180deg, #07111a 0%, #0b1622 46%, #0d1a27 100%);
+      --edge-inset: rgba(255, 255, 255, 0.07);
+      --edge-line: rgba(255, 255, 255, 0.06);
+    }
+    body[data-ui-theme-resolved="dark"] .calendar-event {
+      background: linear-gradient(180deg, rgba(23, 32, 45, 0.9), rgba(19, 27, 39, 0.94));
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+    body[data-ui-theme-resolved="dark"] .overview-usage-card {
+      background: linear-gradient(180deg, rgba(24, 33, 47, 0.95), rgba(17, 25, 37, 0.97));
     }
     body[data-ui-theme-resolved="dark"]::before {
       background:
